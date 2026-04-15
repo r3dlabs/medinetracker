@@ -1,0 +1,50 @@
+import streamlit as st
+import pandas as pd
+from datetime import datetime
+
+# 1. Mock Database: In a real app, this would be a SQL database
+patient_data = {
+    "P-101": [
+        {"med": "Lisinopril", "time": "08:00", "dose": "10mg"},
+        {"med": "Metformin", "time": "19:00", "dose": "500mg"}
+    ],
+    "P-102": [
+        {"med": "Aspirin", "time": "09:00", "dose": "81mg"},
+        {"med": "Atorvastatin", "time": "21:00", "dose": "20mg"},
+        {"med": "Vitamin D", "time": "12:00", "dose": "1000IU"}
+    ]
+}
+
+st.title("💊 MedTrack: Custom Intake Guide")
+
+# 2. Patient Login
+patient_id = st.text_input("Enter Patient ID (try P-101 or P-102):").upper()
+
+if patient_id in patient_data:
+    st.success(f"Welcome back, Patient {patient_id}")
+    
+    # Load meds
+    meds = patient_data[patient_id]
+    
+    st.subheader("Your Daily Schedule")
+    
+    # 3. Interactive Tracker
+    for i, item in enumerate(meds):
+        col1, col2, col3 = st.columns([2, 2, 1])
+        
+        with col1:
+            st.write(f"**{item['med']}** ({item['dose']})")
+        with col2:
+            st.write(f"⏰ Scheduled: {item['time']}")
+        with col3:
+            # Persistent state would be handled by a DB in production
+            taken = st.checkbox("Taken", key=f"med_{i}")
+            
+        # 4. Reminder Logic (Simple UI flag)
+        current_hour = datetime.now().strftime("%H:%M")
+        if not taken and current_hour > item['time']:
+            st.warning(f"⚠️ Reminder: You missed your {item['time']} dose of {item['med']}!")
+
+else:
+    if patient_id:
+        st.error("Patient ID not found. Please contact your provider.")
