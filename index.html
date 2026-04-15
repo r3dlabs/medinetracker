@@ -3,83 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MedTrack Multi-User</title>
+    <title>MedTrack Admin & Patient Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style> [x-cloak] { display: none !important; } </style>
 </head>
-<body class="bg-slate-50 min-h-screen font-sans" x-data="medApp()" x-init="initTimer()">
+<body class="bg-slate-100 min-h-screen font-sans" x-data="medApp()">
 
-    <div class="max-w-md mx-auto p-6">
-        <header class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-indigo-600">💊 MedTrack Pro</h1>
-            <p class="text-gray-500 italic" x-text="isWatcher ? 'Watcher Mode' : 'Patient Mode'"></p>
-        </header>
+    <div class="max-w-2xl mx-auto p-4">
+        
+        <div class="flex bg-white rounded-xl shadow-sm mb-6 p-1 border border-slate-200">
+            <button @click="view = 'login'" :class="view === 'login' ? 'bg-indigo-600 text-white' : 'text-slate-500'" class="flex-1 py-2 rounded-lg font-bold transition">Patient Portal</button>
+            <button @click="view = 'admin'" :class="view === 'admin' ? 'bg-indigo-600 text-white' : 'text-slate-500'" class="flex-1 py-2 rounded-lg font-bold transition">Manage IDs</button>
+        </div>
 
-        <div x-show="!isLoggedIn" class="bg-white p-6 rounded-2xl shadow-xl border border-slate-200">
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Access ID</label>
-                    <input type="text" x-model="inputId" placeholder="P-101" 
-                           class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none uppercase">
+        <div x-show="view === 'admin'" x-cloak class="space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-md">
+                <h2 class="text-xl font-bold mb-4">Create / Edit Patient</h2>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <input type="text" x-model="form.id" placeholder="ID (e.g. P-999)" class="p-2 border rounded uppercase">
+                    <input type="text" x-model="form.name" placeholder="Full Name" class="p-2 border rounded">
                 </div>
                 
-                <div class="flex gap-2">
-                    <button @click="login('patient')" class="flex-1 bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transition">
-                        I am the Patient
-                    </button>
-                    <button @click="login('watcher')" class="flex-1 border-2 border-indigo-600 text-indigo-600 font-bold py-3 rounded-lg hover:bg-indigo-50 transition">
-                        I am a Watcher
-                    </button>
+                <h3 class="font-bold text-sm text-slate-400 uppercase mb-2">Medication Schedule</h3>
+                <template x-for="(med, i) in form.meds" :key="i">
+                    <div class="flex gap-2 mb-2 items-center">
+                        <input type="text" x-model="med.name" placeholder="Med Name" class="flex-1 p-2 border rounded text-sm">
+                        <input type="text" x-model="med.dose" placeholder="Dose" class="w-20 p-2 border rounded text-sm">
+                        <input type="time" x-model="med.time" class="p-2 border rounded text-sm">
+                        <button @click="form.meds.splice(i, 1)" class="text-red-500 font-bold px-2">✕</button>
+                    </div>
+                </template>
+                
+                <div class="flex gap-2 mt-4">
+                    <button @click="addMedToForm()" class="bg-slate-100 text-slate-600 px-4 py-2 rounded-lg text-sm font-bold">+ Add Med</button>
+                    <button @click="savePatient()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex-1">Save Patient Record</button>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-md">
+                <h2 class="text-sm font-bold text-slate-400 uppercase mb-4">Database</h2>
+                <div class="divide-y">
+                    <template x-for="(data, id) in database" :key="id">
+                        <div class="py-3 flex justify-between items-center">
+                            <div>
+                                <span class="font-bold text-indigo-600" x-text="id"></span> — 
+                                <span x-text="data.name"></span>
+                                <p class="text-xs text-slate-400" x-text="data.meds.length + ' meds scheduled'"></p>
+                            </div>
+                            <button @click="editPatient(id)" class="text-indigo-500 text-sm font-bold">Edit</button>
+                        </div>
+                    </template>
                 </div>
             </div>
         </div>
 
-        <div x-show="isLoggedIn" x-cloak>
-            <template x-if="isWatcher && missedAlerts.length > 0">
-                <div class="mb-4 p-4 bg-red-600 text-white rounded-lg animate-pulse">
-                    <p class="font-bold">⚠️ CRITICAL NOTIFICATION</p>
-                    <p class="text-sm">The patient has missed <span x-text="missedAlerts.length"></span> dose(s) by over 15 minutes!</p>
-                </div>
-            </template>
-
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold text-slate-800">Schedule for <span x-text="patientName"></span></h2>
-                <button @click="logout()" class="text-xs text-slate-400 hover:text-red-500">Exit Session</button>
+        <div x-show="view === 'login'">
+            <div x-show="!isLoggedIn" class="bg-white p-8 rounded-3xl shadow-xl text-center">
+                <h1 class="text-2xl font-black mb-6">Welcome to MedTrack</h1>
+                <input type="text" x-model="inputId" placeholder="ENTER PATIENT ID" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl mb-4 text-center text-xl font-bold uppercase outline-indigo-500">
+                <button @click="login()" class="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-200">View My Schedule</button>
             </div>
 
-            <div class="space-y-4">
-                <template x-for="(med, index) in currentMeds" :key="index">
-                    <div :class="med.taken ? 'opacity-60 bg-white' : (isCriticallyLate(med.time) ? 'bg-red-50 border-red-300' : 'bg-white')"
-                         class="p-4 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
-                        
-                        <div class="flex justify-between items-center">
+            <div x-show="isLoggedIn" x-cloak>
+                <div class="flex justify-between items-end mb-6 px-2">
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-800" x-text="patientName"></h2>
+                        <p class="text-slate-400 font-medium">Daily Adherence Tracker</p>
+                    </div>
+                    <button @click="logout()" class="text-slate-400 hover:text-red-500 font-bold text-sm">Logout</button>
+                </div>
+
+                <div class="space-y-4">
+                    <template x-for="(med, index) in currentMeds" :key="index">
+                        <div :class="med.taken ? 'bg-slate-50 border-transparent opacity-60' : (isMissedBy15(med.time) ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200')" 
+                             class="p-5 rounded-3xl border shadow-sm transition-all flex items-center justify-between">
                             <div>
-                                <p class="text-xs font-bold text-indigo-500" x-text="med.time"></p>
+                                <p class="text-xs font-bold uppercase tracking-widest" :class="isMissedBy15(med.time) && !med.taken ? 'text-red-500' : 'text-indigo-500'" x-text="med.time"></p>
                                 <h3 class="text-lg font-bold text-slate-800" x-text="med.name"></h3>
                                 <p class="text-sm text-slate-500" x-text="med.dose"></p>
+                                <p x-show="!med.taken && isMissedBy15(med.time)" class="text-[10px] font-bold text-red-600 mt-1 uppercase">🚨 OVERDUE 15+ MINS</p>
                             </div>
-
-                            <template x-if="!isWatcher">
-                                <button @click="toggleMed(index)" 
-                                        :class="med.taken ? 'bg-green-500' : 'bg-slate-200'"
-                                        class="h-10 w-10 rounded-full flex items-center justify-center transition-all">
-                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                                </button>
-                            </template>
-                            
-                            <template x-if="isWatcher">
-                                <div :class="med.taken ? 'text-green-600' : 'text-slate-300'" class="font-bold text-sm uppercase">
-                                    <span x-text="med.taken ? 'Completed' : 'Pending'"></span>
-                                </div>
-                            </template>
+                            <button @click="med.taken = !med.taken" :class="med.taken ? 'bg-green-500 shadow-green-100' : 'bg-slate-100'" class="h-12 w-12 rounded-2xl flex items-center justify-center shadow-lg transition-all">
+                                <svg class="w-6 h-6 text-white" x-show="med.taken" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                            </button>
                         </div>
-
-                        <div x-show="!med.taken && isCriticallyLate(med.time)" class="mt-2 text-[10px] font-black text-red-500 uppercase tracking-widest">
-                            🚨 Overdue by 15+ Minutes
-                        </div>
-                    </div>
-                </template>
+                    </template>
+                </div>
             </div>
         </div>
     </div>
@@ -87,64 +97,67 @@
     <script>
         function medApp() {
             return {
+                view: 'login',
                 isLoggedIn: false,
-                isWatcher: false,
                 inputId: '',
                 patientName: '',
                 currentMeds: [],
-                missedAlerts: [],
+                
+                // Form state for creating/editing
+                form: { id: '', name: '', meds: [] },
 
-                database: {
-                    "P-101": { name: "John Doe", meds: [{ name: "Lisinopril", dose: "10mg", time: "08:00", taken: false }, { name: "Metformin", dose: "500mg", time: "17:30", taken: false }] },
-                    "P-102": { name: "Jane Smith", meds: [{ name: "Aspirin", dose: "81mg", time: "09:00", taken: false }] }
+                // Persistent Database (Simulated with LocalStorage)
+                database: JSON.parse(localStorage.getItem('medDB')) || {
+                    "P-101": { name: "John Doe", meds: [{ name: "Lisinopril", dose: "10mg", time: "08:00", taken: false }] }
                 },
 
-                login(role) {
+                savePatient() {
+                    if(!this.form.id || !this.form.name) return alert("Fill ID and Name");
+                    const id = this.form.id.toUpperCase();
+                    this.database[id] = { 
+                        name: this.form.name, 
+                        meds: JSON.parse(JSON.stringify(this.form.meds)) 
+                    };
+                    this.persist();
+                    this.resetForm();
+                    alert("Patient saved successfully!");
+                },
+
+                editPatient(id) {
+                    this.form.id = id;
+                    this.form.name = this.database[id].name;
+                    this.form.meds = JSON.parse(JSON.stringify(this.database[id].meds));
+                },
+
+                addMedToForm() {
+                    this.form.meds.push({ name: '', dose: '', time: '08:00', taken: false });
+                },
+
+                resetForm() {
+                    this.form = { id: '', name: '', meds: [] };
+                },
+
+                persist() {
+                    localStorage.setItem('medDB', JSON.stringify(this.database));
+                },
+
+                login() {
                     const id = this.inputId.toUpperCase();
                     if (this.database[id]) {
-                        this.isWatcher = (role === 'watcher');
                         this.patientName = this.database[id].name;
                         this.currentMeds = this.database[id].meds;
                         this.isLoggedIn = true;
-                        this.checkMissedDoses();
-                    } else {
-                        alert("Invalid ID");
-                    }
+                    } else { alert("ID Not Found"); }
                 },
 
-                toggleMed(index) {
-                    if(this.isWatcher) return;
-                    this.currentMeds[index].taken = !this.currentMeds[index].taken;
-                    this.checkMissedDoses();
-                },
+                logout() { this.isLoggedIn = false; this.inputId = ''; },
 
-                // Logic for 15-minute missed notification
-                isCriticallyLate(scheduledTime) {
+                isMissedBy15(scheduledTime) {
                     const now = new Date();
-                    const [hours, minutes] = scheduledTime.split(':');
-                    const scheduledDate = new Date();
-                    scheduledDate.setHours(hours, minutes, 0);
-
-                    // Calculate difference in minutes
-                    const diff = (now - scheduledDate) / (1000 * 60);
-                    return diff >= 15; 
-                },
-
-                checkMissedDoses() {
-                    this.missedAlerts = this.currentMeds.filter(m => !m.taken && this.isCriticallyLate(m.time));
-                },
-
-                initTimer() {
-                    // Check every 30 seconds for missed doses to trigger alerts
-                    setInterval(() => {
-                        if(this.isLoggedIn) this.checkMissedDoses();
-                    }, 30000);
-                },
-
-                logout() {
-                    this.isLoggedIn = false;
-                    this.isWatcher = false;
-                    this.inputId = '';
+                    const [h, m] = scheduledTime.split(':');
+                    const sched = new Date();
+                    sched.setHours(h, m, 0);
+                    return (now - sched) / (1000 * 60) >= 15;
                 }
             }
         }
