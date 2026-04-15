@@ -3,149 +3,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MedTrack | Patient Portal</title>
+    <title>MedTrack Multi-User</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <style>
-        [x-cloak] { display: none !important; }
-    </style>
+    <style> [x-cloak] { display: none !important; } </style>
 </head>
-<body class="bg-gray-50 min-h-screen font-sans">
+<body class="bg-slate-50 min-h-screen font-sans" x-data="medApp()" x-init="initTimer()">
 
-    <div x-data="medApp()" class="max-w-md mx-auto p-6">
-        
+    <div class="max-w-md mx-auto p-6">
         <header class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-blue-600">💊 MedTrack</h1>
-            <p class="text-gray-500">Your personalized health assistant</p>
+            <h1 class="text-3xl font-bold text-indigo-600">💊 MedTrack Pro</h1>
+            <p class="text-gray-500 italic" x-text="isWatcher ? 'Watcher Mode' : 'Patient Mode'"></p>
         </header>
 
-        <div x-show="!isLoggedIn" class="bg-white p-6 rounded-xl shadow-md">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Enter Patient ID</label>
-            <input type="text" x-model="inputId" placeholder="e.g. P-101 or P-102" 
-                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none uppercase">
-            <button @click="login()" 
-                    class="w-full mt-4 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">
-                Access Schedule
-            </button>
-            <p class="text-xs text-center text-gray-400 mt-4">Demo IDs: P-101, P-102</p>
+        <div x-show="!isLoggedIn" class="bg-white p-6 rounded-2xl shadow-xl border border-slate-200">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Access ID</label>
+                    <input type="text" x-model="inputId" placeholder="P-101" 
+                           class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none uppercase">
+                </div>
+                
+                <div class="flex gap-2">
+                    <button @click="login('patient')" class="flex-1 bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transition">
+                        I am the Patient
+                    </button>
+                    <button @click="login('watcher')" class="flex-1 border-2 border-indigo-600 text-indigo-600 font-bold py-3 rounded-lg hover:bg-indigo-50 transition">
+                        I am a Watcher
+                    </button>
+                </div>
+            </div>
         </div>
 
         <div x-show="isLoggedIn" x-cloak>
-            <div class="flex justify-between items-center mb-6">
-                <div>
-                    <h2 class="text-xl font-bold">Hello, <span x-text="patientName"></span></h2>
-                    <p class="text-sm text-gray-500" x-text="new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })"></p>
+            <template x-if="isWatcher && missedAlerts.length > 0">
+                <div class="mb-4 p-4 bg-red-600 text-white rounded-lg animate-pulse">
+                    <p class="font-bold">⚠️ CRITICAL NOTIFICATION</p>
+                    <p class="text-sm">The patient has missed <span x-text="missedAlerts.length"></span> dose(s) by over 15 minutes!</p>
                 </div>
-                <button @click="logout()" class="text-sm text-red-500 font-semibold">Logout</button>
+            </template>
+
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-slate-800">Schedule for <span x-text="patientName"></span></h2>
+                <button @click="logout()" class="text-xs text-slate-400 hover:text-red-500">Exit Session</button>
             </div>
 
             <div class="space-y-4">
                 <template x-for="(med, index) in currentMeds" :key="index">
-                    <div :class="med.taken ? 'bg-green-50 border-green-200' : (isMissed(med.time) ? 'bg-red-50 border-red-200' : 'bg-white border-gray-100')"
-                         class="p-4 rounded-xl border shadow-sm transition-all">
+                    <div :class="med.taken ? 'opacity-60 bg-white' : (isCriticallyLate(med.time) ? 'bg-red-50 border-red-300' : 'bg-white')"
+                         class="p-4 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
                         
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center space-x-4">
-                                <div :class="med.taken ? 'bg-green-500' : (isMissed(med.time) ? 'bg-red-500' : 'bg-blue-500')"
-                                     class="w-2 h-12 rounded-full"></div>
-                                <div>
-                                    <h3 class="font-bold text-gray-800" x-text="med.name"></h3>
-                                    <p class="text-sm text-gray-500" x-text="med.dose + ' • ' + med.time"></p>
-                                </div>
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-xs font-bold text-indigo-500" x-text="med.time"></p>
+                                <h3 class="text-lg font-bold text-slate-800" x-text="med.name"></h3>
+                                <p class="text-sm text-slate-500" x-text="med.dose"></p>
                             </div>
+
+                            <template x-if="!isWatcher">
+                                <button @click="toggleMed(index)" 
+                                        :class="med.taken ? 'bg-green-500' : 'bg-slate-200'"
+                                        class="h-10 w-10 rounded-full flex items-center justify-center transition-all">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                </button>
+                            </template>
                             
-                            <button @click="toggleMed(index)" 
-                                    :class="med.taken ? 'bg-green-600' : 'bg-gray-200'"
-                                    class="p-2 rounded-full transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                                </svg>
-                            </button>
+                            <template x-if="isWatcher">
+                                <div :class="med.taken ? 'text-green-600' : 'text-slate-300'" class="font-bold text-sm uppercase">
+                                    <span x-text="med.taken ? 'Completed' : 'Pending'"></span>
+                                </div>
+                            </template>
                         </div>
 
-                        <div x-show="!med.taken && isMissed(med.time)" class="mt-3 flex items-center text-red-600 text-xs font-bold uppercase tracking-wider">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                            </svg>
-                            Overdue - Please take your dose
+                        <div x-show="!med.taken && isCriticallyLate(med.time)" class="mt-2 text-[10px] font-black text-red-500 uppercase tracking-widest">
+                            🚨 Overdue by 15+ Minutes
                         </div>
                     </div>
                 </template>
             </div>
-
-            <div class="mt-8 p-4 bg-blue-600 rounded-2xl text-white shadow-lg shadow-blue-200">
-                <div class="flex justify-between items-end">
-                    <div>
-                        <p class="text-blue-100 text-sm">Daily Progress</p>
-                        <h4 class="text-2xl font-bold"><span x-text="completedCount"></span> / <span x-text="currentMeds.length"></span></h4>
-                    </div>
-                    <div class="text-right">
-                        <span class="text-4xl">🥤</span>
-                    </div>
-                </div>
-            </div>
         </div>
-
     </div>
 
     <script>
         function medApp() {
             return {
                 isLoggedIn: false,
+                isWatcher: false,
                 inputId: '',
                 patientName: '',
                 currentMeds: [],
-                
-                // Mock Database
+                missedAlerts: [],
+
                 database: {
-                    "P-101": {
-                        name: "John Doe",
-                        meds: [
-                            { name: "Lisinopril", dose: "10mg", time: "08:00", taken: false },
-                            { name: "Metformin", dose: "500mg", time: "19:00", taken: false }
-                        ]
-                    },
-                    "P-102": {
-                        name: "Jane Smith",
-                        meds: [
-                            { name: "Aspirin", dose: "81mg", time: "09:00", taken: false },
-                            { name: "Atorvastatin", dose: "20mg", time: "21:00", taken: false },
-                            { name: "Vitamin D", dose: "1000IU", time: "12:00", taken: false }
-                        ]
-                    }
+                    "P-101": { name: "John Doe", meds: [{ name: "Lisinopril", dose: "10mg", time: "08:00", taken: false }, { name: "Metformin", dose: "500mg", time: "17:30", taken: false }] },
+                    "P-102": { name: "Jane Smith", meds: [{ name: "Aspirin", dose: "81mg", time: "09:00", taken: false }] }
                 },
 
-                login() {
+                login(role) {
                     const id = this.inputId.toUpperCase();
                     if (this.database[id]) {
+                        this.isWatcher = (role === 'watcher');
                         this.patientName = this.database[id].name;
                         this.currentMeds = this.database[id].meds;
                         this.isLoggedIn = true;
+                        this.checkMissedDoses();
                     } else {
-                        alert("Patient ID not found.");
+                        alert("Invalid ID");
                     }
                 },
 
-                logout() {
-                    this.isLoggedIn = false;
-                    this.inputId = '';
-                },
-
                 toggleMed(index) {
+                    if(this.isWatcher) return;
                     this.currentMeds[index].taken = !this.currentMeds[index].taken;
+                    this.checkMissedDoses();
                 },
 
-                isMissed(scheduledTime) {
+                // Logic for 15-minute missed notification
+                isCriticallyLate(scheduledTime) {
                     const now = new Date();
                     const [hours, minutes] = scheduledTime.split(':');
                     const scheduledDate = new Date();
                     scheduledDate.setHours(hours, minutes, 0);
-                    
-                    return now > scheduledDate;
+
+                    // Calculate difference in minutes
+                    const diff = (now - scheduledDate) / (1000 * 60);
+                    return diff >= 15; 
                 },
 
-                get completedCount() {
-                    return this.currentMeds.filter(m => m.taken).length;
+                checkMissedDoses() {
+                    this.missedAlerts = this.currentMeds.filter(m => !m.taken && this.isCriticallyLate(m.time));
+                },
+
+                initTimer() {
+                    // Check every 30 seconds for missed doses to trigger alerts
+                    setInterval(() => {
+                        if(this.isLoggedIn) this.checkMissedDoses();
+                    }, 30000);
+                },
+
+                logout() {
+                    this.isLoggedIn = false;
+                    this.isWatcher = false;
+                    this.inputId = '';
                 }
             }
         }
