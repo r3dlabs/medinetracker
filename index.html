@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0a0f1e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>CareSync</title>
+<title>CarerSync</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
@@ -332,6 +332,10 @@
   [data-theme="light"] .toggle-btn:hover { background: rgba(14,165,155,0.1); }
   [data-theme="light"] .modal-box { box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
   [data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(14,165,155,0.25); }
+
+  /* Wordmark: white in dark mode, accent teal in light mode */
+  .app-wordmark { color: #ffffff; transition: color 0.3s ease; }
+  [data-theme="light"] .app-wordmark { color: var(--accent); }
 </style>
 </head>
 <body x-data="careSync()" x-init="init()">
@@ -354,7 +358,7 @@
             <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
           </svg>
         </div>
-        <span class="font-display text-3xl font-bold text-white tracking-tight">CareSync</span>
+        <span class="font-display text-3xl font-bold tracking-tight" style="color: var(--accent)">CarerSync</span>
       </div>
       <p class="text-sm" style="color:var(--text-muted)">Caregiver Management System</p>
     </div>
@@ -409,7 +413,7 @@
         <div class="w-8 h-8 rounded-xl glass-bright flex items-center justify-center">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
         </div>
-        <span class="font-display font-bold text-lg tracking-tight">CareSync</span>
+        <span class="font-display font-bold text-lg tracking-tight" style="color: var(--accent)">CarerSync</span>
       </div>
 
       <div class="flex items-center gap-3">
