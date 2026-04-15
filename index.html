@@ -12,6 +12,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
   /* ── DARK THEME (default) ── */
@@ -367,6 +368,24 @@
     <div class="glass rounded-2xl p-6">
       <h2 class="font-display text-xl font-bold mb-6">Sign In</h2>
 
+      <!-- Google OAuth button -->
+      <button @click="signInWithGoogle()" :disabled="authLoading"
+        class="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl font-medium text-sm transition-all mb-4"
+        style="background: var(--bg-card-hover); border: 1px solid var(--border);"
+        :style="authLoading ? 'opacity:0.6;cursor:not-allowed' : 'cursor:pointer'"
+        onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        <span x-text="authLoading ? 'Redirecting…' : 'Continue with Google'"></span>
+      </button>
+
+      <!-- Divider -->
+      <div class="flex items-center gap-3 mb-4">
+        <div class="flex-1 h-px" style="background:var(--border)"></div>
+        <span class="text-xs" style="color:var(--text-muted)">OR</span>
+        <div class="flex-1 h-px" style="background:var(--border)"></div>
+      </div>
+
+      <!-- Legacy patient lookup -->
       <div class="space-y-4">
         <div>
           <label class="text-xs mb-2 block" style="color:var(--text-muted)">FULL NAME, PATIENT ID, OR EMAIL</label>
@@ -381,7 +400,7 @@
 
         <div x-show="loginError" class="text-sm text-red-400 bg-red-400/10 rounded-lg px-3 py-2" x-text="loginError"></div>
 
-        <button @click="doLogin()" class="btn-primary w-full text-center">
+        <button @click="doLogin()" :disabled="authLoading" class="btn-primary w-full text-center">
           Continue →
         </button>
       </div>
@@ -400,6 +419,20 @@
     <p class="text-center text-xs mt-4" style="color:var(--text-muted)">
       Demo: use <span class="font-mono" style="color:var(--accent)">P-100</span> or <span class="font-mono" style="color:var(--accent)">Maria Santos</span>
     </p>
+  </div>
+</div>
+
+<!-- ═══════════════════ AUTH LOADING ═══════════════════ -->
+<div x-show="view === 'loading'" class="min-h-screen flex items-center justify-center relative z-10">
+  <div class="text-center">
+    <div class="w-14 h-14 rounded-2xl glass-bright flex items-center justify-center mx-auto mb-4">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    </div>
+    <div class="font-display font-bold text-xl mb-2" style="color:var(--accent)">CarerSync</div>
+    <div class="flex items-center gap-2 justify-center" style="color:var(--text-muted)">
+      <svg class="animate-spin" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
+      <span class="text-sm">Signing you in…</span>
+    </div>
   </div>
 </div>
 
@@ -430,10 +463,15 @@
 
         <!-- Patient selector / user -->
         <div @click="openPatientPicker = true" class="flex items-center gap-2 cursor-pointer glass rounded-xl px-3 py-2 hover:border-accent transition-colors" style="border-color: var(--border)">
-          <div class="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold" style="background: rgba(99,232,228,0.15); color: var(--accent)">
-            <span x-text="(activePatient?.name || 'U').charAt(0)"></span>
-          </div>
-          <span class="text-sm max-w-24 truncate" x-text="activePatient?.name || 'Select'"></span>
+          <template x-if="authUser?.user_metadata?.avatar_url">
+            <img :src="authUser.user_metadata.avatar_url" class="w-6 h-6 rounded-lg object-cover" :alt="authUser.user_metadata.full_name">
+          </template>
+          <template x-if="!authUser?.user_metadata?.avatar_url">
+            <div class="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold" style="background: rgba(99,232,228,0.15); color: var(--accent)">
+              <span x-text="(activePatient?.name || authUser?.user_metadata?.full_name || 'U').charAt(0)"></span>
+            </div>
+          </template>
+          <span class="text-sm max-w-24 truncate" x-text="activePatient?.name || authUser?.user_metadata?.full_name || 'Select'"></span>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
         </div>
       </div>
@@ -866,16 +904,25 @@
 
 <script>
 // ─────────────────────────────────────────────────────────────
+// SUPABASE CLIENT
+// ─────────────────────────────────────────────────────────────
+const SUPABASE_URL  = 'https://wyqikwysipmvadqpbgvt.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5cWlrd3lzaXBtdmFkcXBiZ3Z0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyNDc5MTMsImV4cCI6MjA5MTgyMzkxM30.syEE9R0m1BJRx0ndJU6eXSjeAkkE0mi-MmmS-Z_iEB8';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// ─────────────────────────────────────────────────────────────
 // CARESYNC — Alpine.js Application
 // ─────────────────────────────────────────────────────────────
-
 function careSync() {
   return {
     // ── State ──────────────────────────────────────
-    view: 'login',
+    view: 'loading',   // loading | login | app
     mainTab: 'today',
     isAdmin: false,
     isDark: true,
+
+    authUser: null,       // Supabase auth user object
+    authLoading: false,
 
     loginInput: '',
     loginError: '',
@@ -885,13 +932,17 @@ function careSync() {
     patients: [],
     activePatient: null,
 
-    viewDate: '',         // ISO YYYY-MM-DD
-    viewTasks: [],        // tasks for current viewDate
+    viewDate: '',
+    viewTasks: [],
+    taskLoading: false,
 
     dashView: 'weekly',
     weekOffset: 0,
     calOffset: 0,
     selectedDashDay: '',
+
+    // Cache: { 'patientId_YYYY-MM-DD': { pct, tasks } }
+    logCache: {},
 
     openPatientPicker: false,
     patientModal: false,
@@ -907,24 +958,55 @@ function careSync() {
     chartMonth: null,
 
     // ── Init ───────────────────────────────────────
-    init() {
-      // Load saved theme preference
+    async init() {
+      // Theme
       const savedTheme = localStorage.getItem('cs_theme');
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       this.isDark = savedTheme ? savedTheme === 'dark' : prefersDark;
       this.applyTheme();
 
-      this.loadPatients();
       this.viewDate = this.todayStr();
       this.selectedDashDay = this.todayStr();
+
+      // Check existing session (handles OAuth redirect)
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) {
+        this.authUser = session.user;
+        await this.onSignedIn();
+      } else {
+        this.view = 'login';
+      }
+
+      // Listen for auth state changes (OAuth callback)
+      sb.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          this.authUser = session.user;
+          await this.onSignedIn();
+        } else if (event === 'SIGNED_OUT') {
+          this.authUser = null;
+          this.view = 'login';
+          this.patients = [];
+          this.activePatient = null;
+        }
+      });
+
       this.startOverdueWatcher();
     },
 
+    async onSignedIn() {
+      this.view = 'loading';
+      await this.loadPatients();
+      this.isAdmin = false;
+      this.view = 'app';
+      this.mainTab = 'today';
+      if (this.activePatient) this.loadViewTasks();
+    },
+
+    // ── Theme ──────────────────────────────────────
     toggleTheme() {
       this.isDark = !this.isDark;
       localStorage.setItem('cs_theme', this.isDark ? 'dark' : 'light');
       this.applyTheme();
-      // Refresh charts with new colors
       if (this.mainTab === 'dashboard') {
         this.$nextTick(() => { this.updateWeekChart(); this.updateMonthChart(); });
       }
@@ -936,67 +1018,124 @@ function careSync() {
     },
 
     // ── Auth ───────────────────────────────────────
-    doLogin() {
+    async signInWithGoogle() {
+      this.authLoading = true;
+      const { error } = await sb.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.href }
+      });
+      if (error) {
+        this.loginError = error.message;
+        this.authLoading = false;
+      }
+      // Page will redirect; loading state stays until redirect
+    },
+
+    async doLogin() {
       this.loginError = '';
       const v = this.loginInput.trim().toLowerCase();
-      const p = this.patients.find(pt =>
-        pt.name.toLowerCase() === v ||
-        pt.id.toLowerCase() === v ||
-        pt.email.toLowerCase() === v
-      );
-      if (!p) { this.loginError = 'No matching patient found.'; return; }
-      this.activePatient = p;
+      if (!v) return;
+
+      // Search patients by name, id, or email
+      const { data, error } = await sb
+        .from('patients')
+        .select('*')
+        .or(`name.ilike.${v},id.ilike.${v},email.ilike.${v}`)
+        .limit(1);
+
+      if (error || !data?.length) {
+        this.loginError = 'No matching patient found.';
+        return;
+      }
+
+      // For patient-login we create a minimal auth session via anon
+      // Load their meds and enter app as non-admin
+      const patient = data[0];
+      const meds = await this.fetchMeds(patient.id);
+      this.activePatient = { ...patient, meds };
+      this.patients = [this.activePatient];
       this.isAdmin = false;
       this.view = 'app';
       this.mainTab = 'today';
       this.loadViewTasks();
     },
 
-    doAdminLogin() {
+    async doAdminLogin() {
       this.adminError = '';
-      if (this.adminPass === '!ronMan') {
-        this.isAdmin = true;
-        this.view = 'app';
-        this.mainTab = 'manage';
-        if (!this.activePatient && this.patients.length) this.activePatient = this.patients[0];
-      } else {
-        this.adminError = 'Invalid passcode.';
+      if (this.adminPass !== '!ronMan') {
+        this.adminError = 'Invalid passcode.'; return;
+      }
+      // Admin passcode grants management view on top of current session
+      this.isAdmin = true;
+      this.view = 'app';
+      this.mainTab = 'manage';
+      await this.loadPatients();
+      if (!this.activePatient && this.patients.length) {
+        this.activePatient = this.patients[0];
+        this.loadViewTasks();
       }
     },
 
-    doLogout() {
+    async doLogout() {
+      await sb.auth.signOut();
       this.view = 'login';
       this.loginInput = '';
       this.adminPass = '';
       this.loginError = '';
       this.adminError = '';
       this.isAdmin = false;
+      this.authUser = null;
       this.activePatient = null;
+      this.patients = [];
+      this.logCache = {};
     },
 
-    // ── Patients (CRUD) ────────────────────────────
-    loadPatients() {
-      const raw = localStorage.getItem('cs_patients');
-      if (raw) {
-        this.patients = JSON.parse(raw);
-      } else {
-        this.patients = defaultPatients();
-        this.savePatientsToDB();
+    // ── Patients (CRUD + Supabase) ─────────────────
+    async loadPatients() {
+      const { data, error } = await sb
+        .from('patients')
+        .select('*')
+        .order('id');
+
+      if (error) { console.error('loadPatients:', error); return; }
+
+      // Load meds for each patient
+      this.patients = await Promise.all((data || []).map(async p => ({
+        ...p,
+        meds: await this.fetchMeds(p.id)
+      })));
+
+      // Seed demo data if empty
+      if (!this.patients.length) {
+        await this.seedDemoData();
+        return this.loadPatients();
+      }
+
+      if (!this.activePatient && this.patients.length) {
+        this.activePatient = this.patients[0];
+      } else if (this.activePatient) {
+        // Refresh active patient from loaded list
+        this.activePatient = this.patients.find(p => p.id === this.activePatient.id) || this.patients[0];
       }
     },
 
-    savePatientsToDB() {
-      localStorage.setItem('cs_patients', JSON.stringify(this.patients));
+    async fetchMeds(patientId) {
+      const { data } = await sb
+        .from('meds')
+        .select('*')
+        .eq('patient_id', patientId)
+        .order('time');
+      return data || [];
     },
 
-    openNewPatient() {
+    async openNewPatient() {
       this.editingPatient = null;
-      this.editForm = { name:'', id:'', email:'', meds: [] };
+      this.editForm = { name:'', id:'', email:'', meds:[] };
       this.formError = '';
       this.patientModal = true;
     },
 
-    editPatient(p) {
+    async editPatient(p) {
       this.editingPatient = p;
       this.editForm = {
         name: p.name,
@@ -1012,28 +1151,54 @@ function careSync() {
       this.editForm.meds.push({ type:'med', name:'', dose:'', time:'08:00', taken:false });
     },
 
-    savePatient() {
+    async savePatient() {
       this.formError = '';
       const { name, id, email, meds } = this.editForm;
       if (!name.trim()) { this.formError = 'Name is required.'; return; }
-      if (!id.trim()) { this.formError = 'Patient ID is required.'; return; }
+      if (!id.trim())   { this.formError = 'Patient ID is required.'; return; }
 
       if (this.editingPatient) {
-        const idx = this.patients.findIndex(p => p.id === this.editingPatient.id);
-        if (idx >= 0) {
-          this.patients[idx] = { id: id.trim(), name: name.trim(), email: email.trim(), meds };
-          if (this.activePatient?.id === this.editingPatient.id) {
-            this.activePatient = this.patients[idx];
-          }
+        // Update patient row
+        const { error } = await sb.from('patients')
+          .update({ name: name.trim(), email: email.trim() })
+          .eq('id', this.editingPatient.id);
+        if (error) { this.formError = error.message; return; }
+
+        // Replace meds: delete all then re-insert
+        await sb.from('meds').delete().eq('patient_id', this.editingPatient.id);
+        if (meds.length) {
+          await sb.from('meds').insert(
+            meds.map((m, i) => ({
+              patient_id: this.editingPatient.id,
+              type: m.type, name: m.name.trim(),
+              dose: m.dose || null, time: m.time, sort_order: i
+            }))
+          );
         }
       } else {
-        if (this.patients.find(p => p.id === id.trim())) {
-          this.formError = 'Patient ID already exists.'; return;
+        // Check duplicate
+        const { data: existing } = await sb.from('patients').select('id').eq('id', id.trim()).maybeSingle();
+        if (existing) { this.formError = 'Patient ID already exists.'; return; }
+
+        const { error } = await sb.from('patients').insert({
+          id: id.trim(), name: name.trim(), email: email.trim(),
+          created_by: this.authUser?.id || null
+        });
+        if (error) { this.formError = error.message; return; }
+
+        if (meds.length) {
+          await sb.from('meds').insert(
+            meds.map((m, i) => ({
+              patient_id: id.trim(),
+              type: m.type, name: m.name.trim(),
+              dose: m.dose || null, time: m.time, sort_order: i
+            }))
+          );
         }
-        this.patients.push({ id: id.trim(), name: name.trim(), email: email.trim(), meds });
       }
 
-      this.savePatientsToDB();
+      await this.loadPatients();
+      this.logCache = {};
       this.patientModal = false;
       this.loadViewTasks();
     },
@@ -1043,101 +1208,133 @@ function careSync() {
       this.deleteConfirm = true;
     },
 
-    doDeletePatient() {
-      this.patients = this.patients.filter(p => p.id !== this.deleteTarget.id);
-      if (this.activePatient?.id === this.deleteTarget.id) this.activePatient = this.patients[0] || null;
-      this.savePatientsToDB();
+    async doDeletePatient() {
+      await sb.from('patients').delete().eq('id', this.deleteTarget.id);
       this.deleteConfirm = false;
+      this.deleteTarget = null;
+      await this.loadPatients();
+      this.logCache = {};
       this.loadViewTasks();
     },
 
     // ── Daily Tasks ────────────────────────────────
-    loadViewTasks() {
+    async loadViewTasks() {
       if (!this.activePatient) { this.viewTasks = []; return; }
+      this.taskLoading = true;
 
-      // Load from persisted log or clone master meds
-      const logKey = `cs_log_${this.activePatient.id}_${this.viewDate}`;
-      const saved = localStorage.getItem(logKey);
-      if (saved) {
-        this.viewTasks = JSON.parse(saved);
-      } else {
-        this.viewTasks = this.activePatient.meds.map((m, i) => ({
-          ...m,
-          _uid: `${this.viewDate}_${i}`,
-          taken: false,
-          takenAt: null
-        })).sort((a,b) => a.time.localeCompare(b.time));
-        if (this.isToday(this.viewDate)) this.saveViewLog();
+      // Check cache first
+      const cacheKey = `${this.activePatient.id}_${this.viewDate}`;
+      if (this.logCache[cacheKey]) {
+        this.viewTasks = this.logCache[cacheKey].tasks;
+        this.taskLoading = false;
+        return;
       }
+
+      // Load existing logs for this patient+date
+      const { data: logs } = await sb
+        .from('daily_logs')
+        .select('*, meds(*)')
+        .eq('patient_id', this.activePatient.id)
+        .eq('date', this.viewDate);
+
+      const meds = this.activePatient.meds;
+
+      if (logs && logs.length) {
+        // Map logs back to task objects
+        this.viewTasks = logs.map(log => ({
+          _uid: log.id,
+          med_id: log.med_id,
+          type: log.meds?.type || 'med',
+          name: log.meds?.name || '—',
+          dose: log.meds?.dose || '',
+          time: log.meds?.time || '00:00',
+          taken: log.taken,
+          takenAt: log.taken_at
+        })).sort((a,b) => a.time.localeCompare(b.time));
+      } else {
+        // Create log entries for today from master schedule
+        if (meds.length && this.isToday(this.viewDate)) {
+          const inserts = meds.map(m => ({
+            patient_id: this.activePatient.id,
+            med_id: m.id,
+            date: this.viewDate,
+            taken: false,
+            taken_at: null
+          }));
+          const { data: newLogs } = await sb.from('daily_logs').insert(inserts).select('*, meds(*)');
+          this.viewTasks = (newLogs || []).map(log => ({
+            _uid: log.id,
+            med_id: log.med_id,
+            type: log.meds?.type || 'med',
+            name: log.meds?.name || '—',
+            dose: log.meds?.dose || '',
+            time: log.meds?.time || '00:00',
+            taken: false,
+            takenAt: null
+          })).sort((a,b) => a.time.localeCompare(b.time));
+        } else {
+          // Past day with no logs — show master schedule as all untaken
+          this.viewTasks = meds.map((m, i) => ({
+            _uid: `ghost_${i}`,
+            med_id: m.id,
+            type: m.type, name: m.name, dose: m.dose || '',
+            time: m.time, taken: false, takenAt: null
+          })).sort((a,b) => a.time.localeCompare(b.time));
+        }
+      }
+
+      this.logCache[cacheKey] = { tasks: this.viewTasks, pct: this.adherencePct };
+      this.taskLoading = false;
     },
 
-    saveViewLog() {
-      const logKey = `cs_log_${this.activePatient.id}_${this.viewDate}`;
-      localStorage.setItem(logKey, JSON.stringify(this.viewTasks));
-    },
-
-    toggleTask(task) {
+    async toggleTask(task) {
       if (!this.isToday(this.viewDate)) return;
-      task.taken = !task.taken;
-      task.takenAt = task.taken ? new Date().toISOString() : null;
-      this.saveViewLog();
+      const newTaken = !task.taken;
+      const now = new Date().toISOString();
+
+      // Optimistic update
+      task.taken = newTaken;
+      task.takenAt = newTaken ? now : null;
+
+      // Invalidate cache for today
+      delete this.logCache[`${this.activePatient.id}_${this.viewDate}`];
+
+      // Persist — _uid is the log row UUID for real rows
+      if (!task._uid.startsWith('ghost_')) {
+        await sb.from('daily_logs')
+          .update({ taken: newTaken, taken_at: newTaken ? now : null })
+          .eq('id', task._uid);
+      }
     },
 
     getStatus(task) {
       if (task.taken) return 'done';
-      if (!this.isToday(this.viewDate)) {
-        // Historical — show as missed
-        const now = new Date();
-        const [h,m] = task.time.split(':').map(Number);
-        const scheduled = new Date(this.viewDate);
-        scheduled.setHours(h,m,0,0);
-        if (scheduled < now) return 'overdue';
-        return 'pending';
-      }
       const now = new Date();
-      const [h,m] = task.time.split(':').map(Number);
-      const scheduled = new Date();
-      scheduled.setHours(h,m,0,0);
+      const [h, m] = task.time.split(':').map(Number);
+      const scheduled = new Date(this.viewDate + 'T' + task.time + ':00');
       if (now - scheduled > 15 * 60 * 1000) return 'overdue';
       return 'pending';
     },
 
-    get completedCount() {
-      return this.viewTasks.filter(t => t.taken).length;
-    },
-
+    get completedCount() { return this.viewTasks.filter(t => t.taken).length; },
     get adherencePct() {
       if (!this.viewTasks.length) return 0;
       return Math.round((this.completedCount / this.viewTasks.length) * 100);
     },
-
-    get overdueCount() {
-      return this.viewTasks.filter(t => this.getStatus(t) === 'overdue').length;
-    },
+    get overdueCount() { return this.viewTasks.filter(t => this.getStatus(t) === 'overdue').length; },
 
     startOverdueWatcher() {
       clearInterval(this.overdueTimer);
-      this.overdueTimer = setInterval(() => {
-        // Force reactivity by touch
-        this.viewTasks = [...this.viewTasks];
-      }, 30000);
+      this.overdueTimer = setInterval(() => { this.viewTasks = [...this.viewTasks]; }, 30000);
     },
 
     // ── Date helpers ───────────────────────────────
-    todayStr() {
-      return new Date().toISOString().slice(0,10);
-    },
-
-    isToday(d) {
-      return d === this.todayStr();
-    },
-
+    todayStr() { return new Date().toISOString().slice(0, 10); },
+    isToday(d) { return d === this.todayStr(); },
     formatDisplayDate(d) {
       if (!d) return '';
-      const dt = new Date(d + 'T12:00:00');
-      return dt.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+      return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
     },
-
     dayOfWeek(d) {
       if (!d) return '';
       return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday:'long' });
@@ -1146,35 +1343,27 @@ function careSync() {
     shiftDay(delta) {
       const d = new Date(this.viewDate + 'T12:00:00');
       d.setDate(d.getDate() + delta);
-      const newStr = d.toISOString().slice(0,10);
-      if (newStr > this.todayStr()) return;
-      this.viewDate = newStr;
+      const s = d.toISOString().slice(0, 10);
+      if (s > this.todayStr()) return;
+      this.viewDate = s;
       this.loadViewTasks();
     },
 
-    // ── Dashboard helpers ──────────────────────────
+    // ── Dashboard ──────────────────────────────────
     get weekDays() {
       const days = [];
       const base = new Date();
       base.setDate(base.getDate() + this.weekOffset * 7);
-      // get Monday of that week
       const dow = base.getDay();
       const monday = new Date(base);
       monday.setDate(base.getDate() - ((dow + 6) % 7));
-
       for (let i = 0; i < 7; i++) {
         const d = new Date(monday);
         d.setDate(monday.getDate() + i);
-        const dateStr = d.toISOString().slice(0,10);
+        const dateStr = d.toISOString().slice(0, 10);
         const pct = this.getAdherenceForDate(dateStr);
-        days.push({
-          dateStr,
-          label: ['Mo','Tu','We','Th','Fr','Sa','Su'][i],
-          num: d.getDate(),
-          isToday: dateStr === this.todayStr(),
-          pct,
-          hasData: pct !== null
-        });
+        days.push({ dateStr, label: ['Mo','Tu','We','Th','Fr','Sa','Su'][i], num: d.getDate(),
+          isToday: dateStr === this.todayStr(), pct, hasData: pct !== null });
       }
       return days;
     },
@@ -1182,10 +1371,8 @@ function careSync() {
     get weekLabel() {
       const days = this.weekDays;
       if (!days.length) return '';
-      const first = new Date(days[0].dateStr + 'T12:00:00');
-      const last = new Date(days[6].dateStr + 'T12:00:00');
-      const fmt = d => d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-      return `${fmt(first)} – ${fmt(last)}`;
+      const fmt = d => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric' });
+      return `${fmt(days[0].dateStr)} – ${fmt(days[6].dateStr)}`;
     },
 
     shiftWeek(delta) {
@@ -1196,64 +1383,77 @@ function careSync() {
 
     getAdherenceForDate(dateStr) {
       if (!this.activePatient) return null;
-      const logKey = `cs_log_${this.activePatient.id}_${dateStr}`;
-      const saved = localStorage.getItem(logKey);
-      if (!saved) return null;
-      const tasks = JSON.parse(saved);
-      if (!tasks.length) return null;
-      return Math.round((tasks.filter(t=>t.taken).length / tasks.length)*100);
+      const cacheKey = `${this.activePatient.id}_${dateStr}`;
+      if (this.logCache[cacheKey] !== undefined) return this.logCache[cacheKey]?.pct ?? null;
+      return null;
+    },
+
+    async prefetchWeekLogs() {
+      if (!this.activePatient) return;
+      const dates = this.weekDays.map(d => d.dateStr);
+      const missing = dates.filter(d => this.logCache[`${this.activePatient.id}_${d}`] === undefined);
+      if (!missing.length) return;
+
+      const { data: logs } = await sb
+        .from('daily_logs')
+        .select('date, taken, med_id')
+        .eq('patient_id', this.activePatient.id)
+        .in('date', missing);
+
+      // Group by date
+      const byDate = {};
+      (logs || []).forEach(l => {
+        if (!byDate[l.date]) byDate[l.date] = [];
+        byDate[l.date].push(l);
+      });
+
+      missing.forEach(d => {
+        const rows = byDate[d];
+        if (!rows || !rows.length) { this.logCache[`${this.activePatient.id}_${d}`] = null; return; }
+        const pct = Math.round((rows.filter(r => r.taken).length / rows.length) * 100);
+        this.logCache[`${this.activePatient.id}_${d}`] = { pct, tasks: rows };
+      });
     },
 
     getTasksForDate(dateStr) {
       if (!this.activePatient) return [];
-      const logKey = `cs_log_${this.activePatient.id}_${dateStr}`;
-      const saved = localStorage.getItem(logKey);
-      if (saved) return JSON.parse(saved).sort((a,b)=>a.time.localeCompare(b.time));
-      // fallback to master
-      return this.activePatient.meds.map((m,i) => ({...m, _uid:`${dateStr}_${i}`, taken:false})).sort((a,b)=>a.time.localeCompare(b.time));
+      const cacheKey = `${this.activePatient.id}_${dateStr}`;
+      const cached = this.logCache[cacheKey];
+      if (cached?.tasks && cached.tasks[0]?.type) return cached.tasks;
+      return (this.activePatient.meds || [])
+        .map((m, i) => ({ ...m, _uid: `dash_${i}`, taken: false }))
+        .sort((a, b) => a.time.localeCompare(b.time));
     },
 
     // Monthly
     get calCells() {
       const now = new Date();
       now.setMonth(now.getMonth() + this.calOffset);
-      const year = now.getFullYear();
-      const month = now.getMonth();
+      const year = now.getFullYear(), month = now.getMonth();
       const firstDay = new Date(year, month, 1);
-      const lastDay = new Date(year, month+1, 0);
+      const lastDay  = new Date(year, month + 1, 0);
       const cells = [];
-
-      // pad start
       let startDow = firstDay.getDay();
       for (let i = 0; i < startDow; i++) {
-        const d = new Date(firstDay);
-        d.setDate(d.getDate() - (startDow - i));
-        cells.push({ key: 'p'+i, day: d.getDate(), inMonth: false, dateStr: d.toISOString().slice(0,10), isToday:false, hasData:false });
+        const d = new Date(firstDay); d.setDate(d.getDate() - (startDow - i));
+        cells.push({ key:'p'+i, day:d.getDate(), inMonth:false, dateStr:d.toISOString().slice(0,10), isToday:false, hasData:false });
       }
-
       for (let d = 1; d <= lastDay.getDate(); d++) {
         const dt = new Date(year, month, d);
-        const dateStr = dt.toISOString().slice(0,10);
-        cells.push({
-          key: dateStr, day: d, inMonth: true, dateStr,
-          isToday: dateStr === this.todayStr(),
-          hasData: this.getAdherenceForDate(dateStr) !== null
-        });
+        const dateStr = dt.toISOString().slice(0, 10);
+        cells.push({ key:dateStr, day:d, inMonth:true, dateStr, isToday: dateStr === this.todayStr(),
+          hasData: this.getAdherenceForDate(dateStr) !== null });
       }
-
-      // pad end
       const rem = 42 - cells.length;
       for (let i = 1; i <= rem; i++) {
-        const d = new Date(lastDay);
-        d.setDate(d.getDate() + i);
-        cells.push({ key: 'n'+i, day: d.getDate(), inMonth: false, dateStr: d.toISOString().slice(0,10), isToday:false, hasData:false });
+        const d = new Date(lastDay); d.setDate(d.getDate() + i);
+        cells.push({ key:'n'+i, day:d.getDate(), inMonth:false, dateStr:d.toISOString().slice(0,10), isToday:false, hasData:false });
       }
       return cells;
     },
 
     get calMonthLabel() {
-      const now = new Date();
-      now.setMonth(now.getMonth() + this.calOffset);
+      const now = new Date(); now.setMonth(now.getMonth() + this.calOffset);
       return now.toLocaleDateString('en-US', { month:'long', year:'numeric' });
     },
 
@@ -1264,27 +1464,23 @@ function careSync() {
     },
 
     get monthStats() {
-      const cells = this.calCells.filter(c => c.inMonth && new Date(c.dateStr + 'T12:00:00') <= new Date());
+      const cells = this.calCells.filter(c => c.inMonth && c.dateStr <= this.todayStr());
       const pcts = cells.map(c => this.getAdherenceForDate(c.dateStr)).filter(p => p !== null);
-      if (!pcts.length) return { avg: 0, best: 0, streak: 0 };
-
+      if (!pcts.length) return { avg:0, best:0, streak:0 };
       const avg = Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length);
       const best = Math.max(...pcts);
-
-      // streak (consecutive days with >= 80%)
       let streak = 0;
-      const todayCells = cells.filter(c => c.dateStr <= this.todayStr()).reverse();
-      for (const c of todayCells) {
+      for (const c of [...cells].reverse()) {
         const p = this.getAdherenceForDate(c.dateStr);
-        if (p !== null && p >= 80) streak++;
-        else break;
+        if (p !== null && p >= 80) streak++; else break;
       }
       return { avg, best, streak };
     },
 
     // ── Charts ─────────────────────────────────────
     initCharts() {
-      this.$nextTick(() => {
+      this.$nextTick(async () => {
+        await this.prefetchWeekLogs();
         this.updateWeekChart();
         this.updateMonthChart();
       });
@@ -1294,36 +1490,19 @@ function careSync() {
       const canvas = document.getElementById('weekChart');
       if (!canvas) return;
       if (this.chartWeek) this.chartWeek.destroy();
-
       const labels = this.weekDays.map(d => d.label);
-      const data = this.weekDays.map(d => d.pct ?? 0);
+      const data   = this.weekDays.map(d => d.pct ?? 0);
       const colors = data.map(v => v >= 80 ? '#4ade80' : v >= 50 ? '#fbbf24' : '#ff6b6b');
       const tickColor = this.isDark ? 'rgba(232,244,243,0.45)' : 'rgba(15,31,46,0.45)';
       const gridColor = this.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
-
       this.chartWeek = new Chart(canvas, {
         type: 'bar',
-        data: {
-          labels,
-          datasets: [{
-            data,
-            backgroundColor: colors,
-            borderRadius: 6,
-            borderSkipped: false
-          }]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
+        data: { labels, datasets: [{ data, backgroundColor: colors, borderRadius: 6, borderSkipped: false }] },
+        options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} },
           scales: {
-            x: { grid: { display: false }, ticks: { color: tickColor, font: { family: 'DM Mono', size: 11 } } },
-            y: {
-              min: 0, max: 100,
-              grid: { color: gridColor },
-              ticks: { color: tickColor, font: { family: 'DM Mono', size: 10 }, callback: v => v + '%' }
-            }
-          }
-        }
+            x: { grid:{display:false}, ticks:{color:tickColor, font:{family:'DM Mono',size:11}} },
+            y: { min:0, max:100, grid:{color:gridColor}, ticks:{color:tickColor, font:{family:'DM Mono',size:10}, callback:v=>v+'%'} }
+          }}
       });
     },
 
@@ -1331,120 +1510,67 @@ function careSync() {
       const canvas = document.getElementById('monthChart');
       if (!canvas) return;
       if (this.chartMonth) this.chartMonth.destroy();
-
       const cells = this.calCells.filter(c => c.inMonth && c.dateStr <= this.todayStr());
       const labels = cells.map(c => c.day);
-      const data = cells.map(c => this.getAdherenceForDate(c.dateStr) ?? 0);
-      const accentColor = this.isDark ? '#63e8e4' : '#0e9e98';
+      const data   = cells.map(c => this.getAdherenceForDate(c.dateStr) ?? 0);
+      const ac = this.isDark ? '#63e8e4' : '#0e9e98';
       const tickColor = this.isDark ? 'rgba(232,244,243,0.45)' : 'rgba(15,31,46,0.45)';
       const gridColor = this.isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)';
-
       this.chartMonth = new Chart(canvas, {
         type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            data,
-            borderColor: accentColor,
-            backgroundColor: this.isDark ? 'rgba(99,232,228,0.07)' : 'rgba(14,165,155,0.07)',
-            borderWidth: 2,
-            pointRadius: 3,
-            pointBackgroundColor: accentColor,
-            fill: true,
-            tension: 0.4
-          }]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
+        data: { labels, datasets: [{ data, borderColor:ac,
+          backgroundColor: this.isDark ? 'rgba(99,232,228,0.07)' : 'rgba(14,165,155,0.07)',
+          borderWidth:2, pointRadius:3, pointBackgroundColor:ac, fill:true, tension:0.4 }] },
+        options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
           scales: {
-            x: { grid: { display: false }, ticks: { color: tickColor, font: { family: 'DM Mono', size: 10 }, maxTicksLimit: 10 } },
-            y: {
-              min: 0, max: 100,
-              grid: { color: gridColor },
-              ticks: { color: tickColor, font: { family: 'DM Mono', size: 10 }, callback: v => v + '%' }
-            }
-          }
-        }
+            x: { grid:{display:false}, ticks:{color:tickColor, font:{family:'DM Mono',size:10}, maxTicksLimit:10} },
+            y: { min:0, max:100, grid:{color:gridColor}, ticks:{color:tickColor, font:{family:'DM Mono',size:10}, callback:v=>v+'%'} }
+          }}
       });
+    },
+
+    // ── Seed demo data ─────────────────────────────
+    async seedDemoData() {
+      const userId = this.authUser?.id || null;
+      const patientsData = [
+        { id:'P-100', name:'Maria Santos', email:'maria@carersync.app', created_by: userId },
+        { id:'P-101', name:'Jose Reyes',   email:'jose@carersync.app',  created_by: userId }
+      ];
+      const medsData = [
+        { patient_id:'P-100', type:'med',      name:'Metformin',      dose:'500mg',  time:'07:00', sort_order:0 },
+        { patient_id:'P-100', type:'med',      name:'Lisinopril',     dose:'10mg',   time:'07:00', sort_order:1 },
+        { patient_id:'P-100', type:'eat',      name:'Breakfast',      dose:null,     time:'08:00', sort_order:2 },
+        { patient_id:'P-100', type:'hygiene',  name:'Morning Hygiene',dose:null,     time:'09:00', sort_order:3 },
+        { patient_id:'P-100', type:'med',      name:'Aspirin',        dose:'81mg',   time:'12:00', sort_order:4 },
+        { patient_id:'P-100', type:'eat',      name:'Lunch',          dose:null,     time:'12:30', sort_order:5 },
+        { patient_id:'P-100', type:'activity', name:'Afternoon Walk', dose:'20 min', time:'16:00', sort_order:6 },
+        { patient_id:'P-100', type:'eat',      name:'Dinner',         dose:null,     time:'18:30', sort_order:7 },
+        { patient_id:'P-100', type:'med',      name:'Metformin',      dose:'500mg',  time:'19:00', sort_order:8 },
+        { patient_id:'P-100', type:'hygiene',  name:'Evening Hygiene',dose:null,     time:'20:00', sort_order:9 },
+        { patient_id:'P-101', type:'med',      name:'Amlodipine',     dose:'5mg',    time:'07:30', sort_order:0 },
+        { patient_id:'P-101', type:'eat',      name:'Breakfast',      dose:null,     time:'08:30', sort_order:1 },
+        { patient_id:'P-101', type:'med',      name:'Atorvastatin',   dose:'20mg',   time:'09:00', sort_order:2 },
+        { patient_id:'P-101', type:'eat',      name:'Lunch',          dose:null,     time:'13:00', sort_order:3 },
+        { patient_id:'P-101', type:'activity', name:'Physical Therapy',dose:'45 min',time:'15:00', sort_order:4 },
+        { patient_id:'P-101', type:'eat',      name:'Dinner',         dose:null,     time:'19:00', sort_order:5 },
+        { patient_id:'P-101', type:'hygiene',  name:'Bath',           dose:null,     time:'20:00', sort_order:6 },
+      ];
+
+      await sb.from('patients').upsert(patientsData, { onConflict: 'id' });
+      await sb.from('meds').upsert(medsData, { onConflict: 'patient_id,time,name' });
     },
 
     // ── UI helpers ─────────────────────────────────
     typeStyle(type) {
       const map = {
-        med:      { icon: '💊', bg: 'background: rgba(167,139,250,0.12)' },
-        eat:      { icon: '🍽️', bg: 'background: rgba(251,191,36,0.10)' },
-        hygiene:  { icon: '🫧', bg: 'background: rgba(99,232,228,0.10)' },
-        activity: { icon: '🏃', bg: 'background: rgba(244,114,182,0.10)' }
+        med:      { icon:'💊', bg:'background:rgba(167,139,250,0.12)' },
+        eat:      { icon:'🍽️', bg:'background:rgba(251,191,36,0.10)' },
+        hygiene:  { icon:'🫧', bg:'background:rgba(99,232,228,0.10)' },
+        activity: { icon:'🏃', bg:'background:rgba(244,114,182,0.10)' }
       };
       return map[type] || map.med;
     }
   };
-}
-
-// ─────────────────────────────────────────────────────────────
-// Default seed data
-// ─────────────────────────────────────────────────────────────
-function defaultPatients() {
-  const today = new Date().toISOString().slice(0,10);
-
-  const patients = [
-    {
-      id: 'P-100',
-      name: 'Maria Santos',
-      email: 'maria@caresync.app',
-      meds: [
-        { type:'med',      name:'Metformin',       dose:'500mg',   time:'07:00', taken:false },
-        { type:'med',      name:'Lisinopril',       dose:'10mg',    time:'07:00', taken:false },
-        { type:'eat',      name:'Breakfast',        dose:'',        time:'08:00', taken:false },
-        { type:'hygiene',  name:'Morning Hygiene',  dose:'',        time:'09:00', taken:false },
-        { type:'med',      name:'Aspirin',          dose:'81mg',    time:'12:00', taken:false },
-        { type:'eat',      name:'Lunch',            dose:'',        time:'12:30', taken:false },
-        { type:'activity', name:'Afternoon Walk',   dose:'20 min',  time:'16:00', taken:false },
-        { type:'eat',      name:'Dinner',           dose:'',        time:'18:30', taken:false },
-        { type:'med',      name:'Metformin',        dose:'500mg',   time:'19:00', taken:false },
-        { type:'hygiene',  name:'Evening Hygiene',  dose:'',        time:'20:00', taken:false },
-        { type:'activity', name:'Evening Nap',      dose:'30 min',  time:'14:00', taken:false },
-      ]
-    },
-    {
-      id: 'P-101',
-      name: 'Jose Reyes',
-      email: 'jose@caresync.app',
-      meds: [
-        { type:'med',      name:'Amlodipine',       dose:'5mg',     time:'07:30', taken:false },
-        { type:'eat',      name:'Breakfast',        dose:'',        time:'08:30', taken:false },
-        { type:'med',      name:'Atorvastatin',     dose:'20mg',    time:'09:00', taken:false },
-        { type:'eat',      name:'Snack',            dose:'',        time:'11:00', taken:false },
-        { type:'eat',      name:'Lunch',            dose:'',        time:'13:00', taken:false },
-        { type:'activity', name:'Physical Therapy', dose:'45 min',  time:'15:00', taken:false },
-        { type:'eat',      name:'Dinner',           dose:'',        time:'19:00', taken:false },
-        { type:'hygiene',  name:'Bath',             dose:'',        time:'20:00', taken:false },
-      ]
-    }
-  ];
-
-  // Seed some historical log data so charts look populated
-  patients.forEach(p => {
-    for (let daysBack = 14; daysBack >= 1; daysBack--) {
-      const d = new Date();
-      d.setDate(d.getDate() - daysBack);
-      const dateStr = d.toISOString().slice(0,10);
-      const logKey = `cs_log_${p.id}_${dateStr}`;
-      if (!localStorage.getItem(logKey)) {
-        const adherence = 0.5 + Math.random() * 0.5;
-        const tasks = p.meds.map((m,i) => ({
-          ...m,
-          _uid: `${dateStr}_${i}`,
-          taken: Math.random() < adherence,
-          takenAt: null
-        }));
-        localStorage.setItem(logKey, JSON.stringify(tasks));
-      }
-    }
-  });
-
-  return patients;
 }
 </script>
 </body>
