@@ -1,173 +1,1447 @@
 <!DOCTYPE html>
-<html lang="en" x-data="careApp()" :class="{ 'dark': darkMode }">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CareSync Pro | Secure Portal</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        // Tailwind configuration to enable class-based dark mode
-        tailwind.config = {
-            darkMode: 'class',
-        }
-    </script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <style>
-        [x-cloak] { display: none !important; }
-        .glass { backdrop-filter: blur(10px); }
-        /* Smooth transition for theme switching */
-        body { transition: background-color 0.3s ease, color 0.3s ease; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0a0f1e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>CareSync</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<style>
+  /* ── DARK THEME (default) ── */
+  :root {
+    --bg-deep: #060c1a;
+    --bg-surface: #0d1829;
+    --bg-card: rgba(255,255,255,0.04);
+    --bg-card-hover: rgba(255,255,255,0.07);
+    --border: rgba(255,255,255,0.08);
+    --border-bright: rgba(99,232,228,0.3);
+    --accent: #63e8e4;
+    --accent2: #a78bfa;
+    --accent3: #f472b6;
+    --text-primary: #e8f4f3;
+    --text-muted: rgba(232,244,243,0.45);
+    --overdue: #ff6b6b;
+    --success: #4ade80;
+    --warn: #fbbf24;
+    --glow1: rgba(99,232,228,0.07);
+    --glow2: rgba(167,139,250,0.06);
+    --overlay-bg: rgba(6,12,26,0.85);
+    --modal-bg: #0d1829;
+    --select-bg: #0f1b2e;
+    --input-bg: rgba(255,255,255,0.04);
+    --input-focus-bg: rgba(99,232,228,0.04);
+    --week-dot-empty: rgba(255,255,255,0.15);
+    --theme-icon: '☀️';
+  }
+
+  /* ── LIGHT THEME ── */
+  [data-theme="light"] {
+    --bg-deep: #f0f4f8;
+    --bg-surface: #ffffff;
+    --bg-card: rgba(255,255,255,0.75);
+    --bg-card-hover: rgba(255,255,255,0.95);
+    --border: rgba(0,0,0,0.08);
+    --border-bright: rgba(14,165,155,0.35);
+    --accent: #0e9e98;
+    --accent2: #7c3aed;
+    --accent3: #db2777;
+    --text-primary: #0f1f2e;
+    --text-muted: rgba(15,31,46,0.45);
+    --overdue: #dc2626;
+    --success: #16a34a;
+    --warn: #d97706;
+    --glow1: rgba(14,165,155,0.08);
+    --glow2: rgba(124,58,237,0.05);
+    --overlay-bg: rgba(15,31,46,0.6);
+    --modal-bg: #ffffff;
+    --select-bg: #f8fafc;
+    --input-bg: rgba(0,0,0,0.03);
+    --input-focus-bg: rgba(14,165,155,0.05);
+    --week-dot-empty: rgba(0,0,0,0.12);
+    --theme-icon: '🌙';
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+    transition: background 0.35s ease, color 0.35s ease;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% -10%, var(--glow1) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 100%, var(--glow2) 0%, transparent 60%);
+    pointer-events: none;
+    transition: background 0.35s ease;
+  }
+
+  /* Smooth transitions on theme-sensitive elements */
+  .glass, .glass-bright, .input-field, .modal-box, .btn-ghost,
+  header, nav, .task-item, .cal-day, .week-day { transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease; }
+
+  /* Glass cards */
+  .glass {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  .glass-bright {
+    background: rgba(99,232,228,0.06);
+    border: 1px solid var(--border-bright);
+    backdrop-filter: blur(20px);
+  }
+  [data-theme="light"] .glass-bright {
+    background: rgba(14,165,155,0.08);
+  }
+
+  /* Theme toggle button */
+  .theme-toggle {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+  .theme-toggle:hover { border-color: var(--accent); background: var(--input-focus-bg); }
+
+  /* Typography */
+  .font-display { font-family: 'Syne', sans-serif; }
+  .font-mono { font-family: 'DM Mono', monospace; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(99,232,228,0.2); border-radius: 2px; }
+
+  /* Nav */
+  .nav-tab { transition: all 0.2s ease; position: relative; }
+  .nav-tab.active { color: var(--accent); }
+  .nav-tab.active::after {
+    content: ''; position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%);
+    width: 20px; height: 2px; background: var(--accent); border-radius: 1px;
+  }
+
+  /* Task items */
+  .task-item { transition: all 0.25s ease; }
+  .task-item:hover { background: var(--bg-card-hover); }
+  .task-done { opacity: 0.5; }
+  .task-overdue { border-color: rgba(255,107,107,0.4) !important; }
+  .task-overdue .task-time { color: var(--overdue); }
+
+  /* Toggle */
+  .toggle-btn {
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+  .toggle-btn:hover { border-color: var(--accent); background: rgba(99,232,228,0.1); }
+  .toggle-btn.done { background: var(--success); border-color: var(--success); }
+  .toggle-btn.overdue { border-color: var(--overdue); }
+
+  /* Pill badge */
+  .pill {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    padding: 2px 8px; border-radius: 20px;
+    letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  .pill-med { background: rgba(167,139,250,0.15); color: var(--accent2); border: 1px solid rgba(167,139,250,0.3); }
+  .pill-eat { background: rgba(251,191,36,0.12); color: var(--warn); border: 1px solid rgba(251,191,36,0.25); }
+  .pill-hygiene { background: rgba(99,232,228,0.1); color: var(--accent); border: 1px solid rgba(99,232,228,0.2); }
+  .pill-activity { background: rgba(244,114,182,0.12); color: var(--accent3); border: 1px solid rgba(244,114,182,0.25); }
+
+  /* Input */
+  .input-field {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text-primary);
+    padding: 12px 16px;
+    width: 100%;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    transition: border-color 0.2s, background 0.3s;
+    outline: none;
+  }
+  .input-field:focus { border-color: var(--accent); background: var(--input-focus-bg); }
+  .input-field::placeholder { color: var(--text-muted); }
+  select.input-field option { background: var(--select-bg); color: var(--text-primary); }
+
+  /* Buttons */
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #3dd6d2);
+    color: #060c1a;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    border: none;
+    border-radius: 12px;
+    padding: 14px 28px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.03em;
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(99,232,228,0.25); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    border-radius: 12px;
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger {
+    background: rgba(255,107,107,0.1);
+    border: 1px solid rgba(255,107,107,0.3);
+    color: var(--overdue);
+    font-family: 'DM Sans', sans-serif;
+    border-radius: 10px;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 13px;
+  }
+  .btn-danger:hover { background: rgba(255,107,107,0.2); }
+
+  /* Progress bar */
+  .progress-track {
+    height: 6px; border-radius: 3px;
+    background: rgba(255,255,255,0.08);
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent), #a78bfa);
+    transition: width 0.5s ease;
+  }
+
+  /* Calendar day */
+  .cal-day {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .cal-day:hover { background: rgba(99,232,228,0.1); }
+  .cal-day.today { background: rgba(99,232,228,0.15); color: var(--accent); font-weight: 600; }
+  .cal-day.selected { background: var(--accent); color: #060c1a; font-weight: 700; }
+  .cal-day.has-data::after {
+    content: ''; position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
+    width: 4px; height: 4px; border-radius: 50%; background: var(--accent);
+  }
+  .cal-day.selected::after { background: #060c1a; }
+
+  /* Week slider */
+  .week-day {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    gap: 6px; padding: 10px 4px; border-radius: 12px; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .week-day:hover { background: rgba(99,232,228,0.07); }
+  .week-day.selected { background: rgba(99,232,228,0.12); }
+  .week-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--week-dot-empty);
+  }
+  .week-dot.filled { background: var(--accent); }
+  .week-dot.partial { background: var(--warn); }
+  .week-dot.empty { background: rgba(255,107,107,0.4); }
+
+  /* Section fade-in */
+  .fade-in { animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  /* Shimmer for loading */
+  .shimmer {
+    background: linear-gradient(90deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.03) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+  /* Modal overlay */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: var(--overlay-bg);
+    backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .modal-box {
+    background: var(--modal-bg);
+    border: 1px solid var(--border-bright);
+    border-radius: 20px;
+    padding: 28px;
+    width: 100%; max-width: 420px;
+    max-height: 85vh; overflow-y: auto;
+  }
+
+  /* Adherence ring */
+  .ring-wrap { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+  .ring-wrap svg { transform: rotate(-90deg); }
+  .ring-text { position: absolute; text-align: center; }
+
+  /* Chart container */
+  .chart-container { position: relative; height: 160px; }
+
+  /* Notification dot */
+  .notif-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--overdue);
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  /* ── Light mode surface overrides ── */
+  [data-theme="light"] body { background: var(--bg-deep); }
+  [data-theme="light"] .progress-track { background: rgba(0,0,0,0.08); }
+  [data-theme="light"] .glass {
+    background: rgba(255,255,255,0.72);
+    box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+  }
+  [data-theme="light"] .task-item:hover { background: rgba(255,255,255,0.95); }
+  [data-theme="light"] .cal-day:hover { background: rgba(14,165,155,0.08); }
+  [data-theme="light"] .cal-day.today { background: rgba(14,165,155,0.12); }
+  [data-theme="light"] .week-day:hover { background: rgba(14,165,155,0.06); }
+  [data-theme="light"] .week-day.selected { background: rgba(14,165,155,0.1); }
+  [data-theme="light"] .toggle-btn:hover { background: rgba(14,165,155,0.1); }
+  [data-theme="light"] .modal-box { box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+  [data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(14,165,155,0.25); }
+</style>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 min-h-screen font-sans text-slate-900 dark:text-slate-100">
+<body x-data="careSync()" x-init="init()">
 
-    <nav class="glass border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50 p-4 bg-white/80 dark:bg-slate-900/80">
-        <div class="max-w-4xl mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-2">
-                <h1 class="text-xl font-black text-slate-800 dark:text-white tracking-tight">CareSync</h1>
-            </div>
-            
-            <div class="flex items-center gap-3">
-                <button @click="toggleTheme()" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-yellow-400">
-                    <template x-if="!darkMode">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </template>
-                    <template x-if="darkMode">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </template>
-                </button>
+<!-- ═══════════════════ LOGIN SCREEN ═══════════════════ -->
+<div x-show="view === 'login'" x-transition class="min-h-screen flex items-center justify-center p-6 relative z-10">
+  <!-- Theme toggle top-right on login -->
+  <div class="fixed top-4 right-4 z-50">
+    <button @click="toggleTheme()" class="theme-toggle">
+      <span x-text="isDark ? '☀️' : '🌙'"></span>
+    </button>
+  </div>
+  <div class="w-full max-w-sm">
 
-                <div class="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl" x-show="isLoggedIn">
-                    <button @click="view = 'daily'" :class="view === 'daily' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500'" class="px-3 py-1.5 rounded-lg text-[10px] font-bold transition uppercase">Daily</button>
-                    <button @click="openAdmin()" :class="view === 'admin' ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600' : 'text-slate-500'" class="px-3 py-1.5 rounded-lg text-[10px] font-bold transition uppercase">Manage</button>
-                </div>
-            </div>
+    <!-- Logo -->
+    <div class="text-center mb-10">
+      <div class="inline-flex items-center gap-3 mb-4">
+        <div class="w-12 h-12 rounded-2xl glass-bright flex items-center justify-center">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+          </svg>
         </div>
-    </nav>
+        <span class="font-display text-3xl font-bold text-white tracking-tight">CareSync</span>
+      </div>
+      <p class="text-sm" style="color:var(--text-muted)">Caregiver Management System</p>
+    </div>
 
-    <main class="max-w-xl mx-auto p-6">
+    <!-- Login card -->
+    <div class="glass rounded-2xl p-6">
+      <h2 class="font-display text-xl font-bold mb-6">Sign In</h2>
 
-        <div x-show="!isLoggedIn" class="mt-12 bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800">
-            <h2 class="text-2xl font-bold text-center mb-6">Patient Portal</h2>
-            <input type="text" x-model="loginInput" placeholder="ID, Name, or Email" 
-                   class="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl mb-4 text-center focus:ring-2 focus:ring-indigo-500 outline-none transition dark:text-white">
-            <button @click="login()" class="w-full bg-slate-900 dark:bg-indigo-600 text-white font-bold py-4 rounded-2xl shadow-lg">Access Schedule</button>
+      <div class="space-y-4">
+        <div>
+          <label class="text-xs mb-2 block" style="color:var(--text-muted)">FULL NAME, PATIENT ID, OR EMAIL</label>
+          <input
+            x-model="loginInput"
+            type="text"
+            class="input-field"
+            placeholder="e.g. P-100 or jane@email.com"
+            @keydown.enter="doLogin()"
+          >
         </div>
 
-        <div x-show="isLoggedIn" x-cloak>
-            
-            <div x-show="view === 'daily'">
-                <div class="flex justify-between items-end mb-8">
-                    <div>
-                        <h2 class="text-3xl font-black" x-text="patientData.name"></h2>
-                        <p class="text-indigo-600 dark:text-indigo-400 font-bold text-sm uppercase" x-text="todayDate"></p>
-                    </div>
-                    <button @click="logout()" class="text-slate-400 hover:text-red-500 font-bold text-sm">Logout</button>
-                </div>
+        <div x-show="loginError" class="text-sm text-red-400 bg-red-400/10 rounded-lg px-3 py-2" x-text="loginError"></div>
 
-                <div class="space-y-4">
-                    <template x-for="(task, index) in patientData.meds" :key="index">
-                        <div class="flex gap-4 items-center">
-                            <div class="w-12 text-right">
-                                <span class="text-[10px] font-black text-slate-400" x-text="task.time"></span>
-                            </div>
-                            <div :class="task.taken ? 'bg-slate-100 dark:bg-slate-800/50 opacity-60' : (isMissedBy15(task.time) ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-900' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800')" 
-                                 class="flex-1 p-5 rounded-3xl border transition-all flex items-center justify-between">
-                                <div class="flex gap-4 items-center">
-                                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl bg-slate-50 dark:bg-slate-800" x-text="getIcon(task.type)"></div>
-                                    <div>
-                                        <h3 class="font-bold leading-tight" x-text="task.name"></h3>
-                                        <p class="text-xs text-slate-500" x-text="task.dose || 'Standard Care'"></p>
-                                    </div>
-                                </div>
-                                <button @click="task.taken = !task.taken; persist()" 
-                                        :class="task.taken ? 'bg-green-500' : 'bg-slate-200 dark:bg-slate-700'" 
-                                        class="h-10 w-10 rounded-full flex items-center justify-center shadow-inner">
-                                    <svg class="w-5 h-5 text-white" x-show="task.taken" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                                </button>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-            </div>
+        <button @click="doLogin()" class="btn-primary w-full text-center">
+          Continue →
+        </button>
+      </div>
 
-            <div x-show="view === 'admin'" class="space-y-6">
-                <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800">
-                    <h3 class="font-bold mb-4">Edit Master Schedule</h3>
-                    <div class="space-y-3">
-                        <template x-for="(task, i) in patientData.meds" :key="i">
-                            <div class="grid grid-cols-12 gap-2 p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl items-center">
-                                <input type="text" x-model="task.name" class="col-span-7 text-xs p-2 rounded border dark:bg-slate-700 dark:border-slate-600">
-                                <input type="time" x-model="task.time" class="col-span-3 text-xs p-2 rounded border dark:bg-slate-700 dark:border-slate-600">
-                                <button @click="patientData.meds.splice(i, 1)" class="col-span-2 text-red-500 font-bold">✕</button>
-                            </div>
-                        </template>
-                    </div>
-                    <button @click="persist(); alert('Schedule Updated!')" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold mt-6">Save Changes</button>
-                </div>
-            </div>
-
+      <div class="mt-6 pt-6 border-t" style="border-color:var(--border)">
+        <p class="text-xs text-center mb-3" style="color:var(--text-muted)">MANAGEMENT ACCESS</p>
+        <div class="flex gap-2">
+          <input x-model="adminPass" type="password" class="input-field" placeholder="Admin passcode" @keydown.enter="doAdminLogin()">
+          <button @click="doAdminLogin()" class="btn-ghost whitespace-nowrap text-sm px-4">Admin</button>
         </div>
-    </main>
+        <div x-show="adminError" class="text-xs text-red-400 mt-2" x-text="adminError"></div>
+      </div>
+    </div>
 
-    <script>
-        function careApp() {
-            return {
-                view: 'daily',
-                isLoggedIn: false,
-                loginInput: '',
-                patientData: null,
-                darkMode: localStorage.getItem('theme') === 'dark',
-                todayDate: new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }),
+    <!-- Demo hint -->
+    <p class="text-center text-xs mt-4" style="color:var(--text-muted)">
+      Demo: use <span class="font-mono" style="color:var(--accent)">P-100</span> or <span class="font-mono" style="color:var(--accent)">Maria Santos</span>
+    </p>
+  </div>
+</div>
 
-                database: JSON.parse(localStorage.getItem('careSyncDB')) || [
-                    { 
-                        id: 'P-101', 
-                        name: 'Tony Stark', 
-                        email: 'tony@starkintl.com',
-                        meds: [
-                            { type: 'med', name: 'Arc Core Supplement', dose: '1 tab', time: '08:00', taken: false },
-                            { type: 'eat', name: 'Green Smoothie', dose: '12oz', time: '09:00', taken: false }
-                        ] 
-                    }
-                ],
+<!-- ═══════════════════ MAIN APP ═══════════════════ -->
+<div x-show="view !== 'login'" x-transition class="relative z-10 min-h-screen pb-24">
 
-                toggleTheme() {
-                    this.darkMode = !this.darkMode;
-                    localStorage.setItem('theme', this.darkMode ? 'dark' : 'light');
-                },
+  <!-- ── Header ── -->
+  <header class="sticky top-0 z-50 glass border-b" style="border-color:var(--border)">
+    <div class="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-xl glass-bright flex items-center justify-center">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </div>
+        <span class="font-display font-bold text-lg tracking-tight">CareSync</span>
+      </div>
 
-                login() {
-                    const input = this.loginInput.trim().toLowerCase();
-                    const user = this.database.find(p => 
-                        p.id.toLowerCase() === input || 
-                        p.name.toLowerCase() === input || 
-                        p.email.toLowerCase() === input
-                    );
-                    if (user) {
-                        this.patientData = user;
-                        this.isLoggedIn = true;
-                    } else { alert("Record not found."); }
-                },
+      <div class="flex items-center gap-3">
+        <!-- Overdue badge -->
+        <div x-show="overdueCount > 0" class="flex items-center gap-1.5 glass rounded-full px-3 py-1.5">
+          <div class="notif-dot"></div>
+          <span class="text-xs font-mono" style="color:var(--overdue)" x-text="overdueCount + ' overdue'"></span>
+        </div>
 
-                openAdmin() {
-                    if (prompt("Enter Management Passcode:") === "!ronMan") this.view = 'admin';
-                    else alert("Unauthorized!");
-                },
+        <!-- Theme toggle -->
+        <button @click="toggleTheme()" class="theme-toggle" :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'">
+          <span x-text="isDark ? '☀️' : '🌙'"></span>
+        </button>
 
-                getIcon(type) { return { med: '💊', eat: '🍎', hygiene: '🧼' }[type] || '📋'; },
-                persist() { localStorage.setItem('careSyncDB', JSON.stringify(this.database)); },
-                logout() { this.isLoggedIn = false; this.loginInput = ''; this.view = 'daily'; },
+        <!-- Patient selector / user -->
+        <div @click="openPatientPicker = true" class="flex items-center gap-2 cursor-pointer glass rounded-xl px-3 py-2 hover:border-accent transition-colors" style="border-color: var(--border)">
+          <div class="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold" style="background: rgba(99,232,228,0.15); color: var(--accent)">
+            <span x-text="(activePatient?.name || 'U').charAt(0)"></span>
+          </div>
+          <span class="text-sm max-w-24 truncate" x-text="activePatient?.name || 'Select'"></span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+      </div>
+    </div>
+  </header>
 
-                isMissedBy15(scheduledTime) {
-                    const now = new Date();
-                    const [h, m] = scheduledTime.split(':');
-                    const sched = new Date();
-                    sched.setHours(h, m, 0);
-                    return (now - sched) / (1000 * 60) >= 15;
-                }
-            }
+  <!-- ── Content Area ── -->
+  <div class="max-w-lg mx-auto px-4 py-4">
+
+    <!-- TODAY / TIMELINE view -->
+    <div x-show="mainTab === 'today'" class="fade-in">
+
+      <!-- Date nav + adherence ring -->
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <button @click="shiftDay(-1)" class="w-9 h-9 rounded-xl glass flex items-center justify-center hover:border-accent transition-colors" style="border:1px solid var(--border)">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <div class="text-center min-w-32">
+            <div class="font-display font-bold text-base" x-text="formatDisplayDate(viewDate)"></div>
+            <div class="text-xs" style="color:var(--text-muted)" x-text="isToday(viewDate) ? 'Today' : dayOfWeek(viewDate)"></div>
+          </div>
+          <button @click="shiftDay(1)" :disabled="isToday(viewDate)" class="w-9 h-9 rounded-xl glass flex items-center justify-center hover:border-accent transition-colors disabled:opacity-30" style="border:1px solid var(--border)">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+        </div>
+
+        <!-- Mini ring -->
+        <div class="ring-wrap w-14 h-14">
+          <svg width="56" height="56" viewBox="0 0 56 56">
+            <circle cx="28" cy="28" r="22" stroke="rgba(255,255,255,0.07)" stroke-width="5" fill="none"/>
+            <circle cx="28" cy="28" r="22"
+              :stroke="adherencePct >= 80 ? 'var(--success)' : adherencePct >= 50 ? 'var(--warn)' : 'var(--overdue)'"
+              stroke-width="5" fill="none"
+              stroke-linecap="round"
+              :stroke-dasharray="`${adherencePct * 1.382} 138.2`"/>
+          </svg>
+          <div class="ring-text">
+            <div class="font-mono text-xs font-bold" x-text="adherencePct + '%'"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tasks list -->
+      <div class="space-y-2">
+        <template x-if="!activePatient">
+          <div class="glass rounded-2xl p-8 text-center">
+            <p style="color:var(--text-muted)">No patient selected</p>
+          </div>
+        </template>
+
+        <template x-if="activePatient && viewTasks.length === 0">
+          <div class="glass rounded-2xl p-8 text-center">
+            <p style="color:var(--text-muted)">No tasks scheduled</p>
+          </div>
+        </template>
+
+        <template x-for="(task, i) in viewTasks" :key="task._uid">
+          <div
+            class="task-item glass rounded-2xl p-4 flex items-center gap-4"
+            :class="{ 'task-done': getStatus(task) === 'done', 'task-overdue': getStatus(task) === 'overdue' }"
+            style="border: 1px solid var(--border)"
+            :style="getStatus(task) === 'overdue' ? 'border-color: rgba(255,107,107,0.35)' : ''"
+          >
+            <!-- Icon -->
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              :style="typeStyle(task.type).bg">
+              <span x-text="typeStyle(task.type).icon" class="text-lg"></span>
+            </div>
+
+            <!-- Details -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-0.5">
+                <span class="font-medium text-sm truncate" x-text="task.name"></span>
+                <span class="pill" :class="'pill-' + task.type" x-text="task.type"></span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="task-time font-mono text-xs" x-text="task.time"
+                  :style="getStatus(task) === 'overdue' ? 'color:var(--overdue)' : 'color:var(--text-muted)'"></span>
+                <template x-if="task.dose">
+                  <span class="text-xs" style="color:var(--text-muted)" x-text="task.dose"></span>
+                </template>
+                <template x-if="getStatus(task) === 'overdue'">
+                  <span class="text-xs font-bold" style="color:var(--overdue)">OVERDUE</span>
+                </template>
+                <template x-if="getStatus(task) === 'done'">
+                  <span class="text-xs" style="color:var(--success)">Done</span>
+                </template>
+              </div>
+            </div>
+
+            <!-- Toggle -->
+            <button
+              @click="toggleTask(task)"
+              class="toggle-btn"
+              :class="{ 'done': getStatus(task) === 'done', 'overdue': getStatus(task) === 'overdue' }"
+              :disabled="!isToday(viewDate)"
+            >
+              <template x-if="getStatus(task) === 'done'">
+                <svg width="18" height="18" fill="none" stroke="#060c1a" stroke-width="3"><path d="M4 10l4 4 8-8"/></svg>
+              </template>
+              <template x-if="getStatus(task) !== 'done'">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="6"/></svg>
+              </template>
+            </button>
+          </div>
+        </template>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="mt-4 glass rounded-2xl p-4" x-show="viewTasks.length > 0">
+        <div class="flex justify-between text-xs mb-2">
+          <span style="color:var(--text-muted)">Daily Progress</span>
+          <span class="font-mono" x-text="completedCount + '/' + viewTasks.length + ' tasks'"></span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" :style="'width:' + adherencePct + '%'"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DASHBOARD / Analytics ── -->
+    <div x-show="mainTab === 'dashboard'" class="fade-in">
+
+      <!-- View toggle -->
+      <div class="glass rounded-2xl p-1 flex gap-1 mb-4">
+        <button @click="dashView = 'weekly'"
+          class="flex-1 py-2 rounded-xl text-sm font-medium transition-all"
+          :style="dashView==='weekly' ? 'background:rgba(99,232,228,0.15);color:var(--accent)' : 'color:var(--text-muted)'">
+          Weekly
+        </button>
+        <button @click="dashView = 'monthly'"
+          class="flex-1 py-2 rounded-xl text-sm font-medium transition-all"
+          :style="dashView==='monthly' ? 'background:rgba(99,232,228,0.15);color:var(--accent)' : 'color:var(--text-muted)'">
+          Monthly
+        </button>
+      </div>
+
+      <!-- Weekly slider -->
+      <template x-if="dashView === 'weekly'">
+        <div class="fade-in">
+          <!-- Week nav -->
+          <div class="flex items-center justify-between mb-3">
+            <button @click="shiftWeek(-1)" class="w-9 h-9 rounded-xl glass flex items-center justify-center" style="border:1px solid var(--border)">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <span class="text-sm font-medium" x-text="weekLabel"></span>
+            <button @click="shiftWeek(1)" :disabled="weekOffset >= 0" class="w-9 h-9 rounded-xl glass flex items-center justify-center disabled:opacity-30" style="border:1px solid var(--border)">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+          </div>
+
+          <!-- Day pills -->
+          <div class="glass rounded-2xl p-4 mb-4">
+            <div class="flex gap-1">
+              <template x-for="day in weekDays" :key="day.dateStr">
+                <div class="week-day" :class="{ selected: day.dateStr === selectedDashDay }" @click="selectedDashDay = day.dateStr">
+                  <span class="text-xs" style="color:var(--text-muted)" x-text="day.label"></span>
+                  <span class="text-sm font-mono font-bold" x-text="day.num"
+                    :style="day.isToday ? 'color:var(--accent)' : ''"></span>
+                  <div class="week-dot"
+                    :class="day.pct >= 80 ? 'filled' : day.pct >= 40 ? 'partial' : day.hasData ? 'empty' : ''"></div>
+                  <span class="text-xs font-mono" x-text="day.hasData ? day.pct + '%' : '--'"
+                    :style="day.pct >= 80 ? 'color:var(--success)' : day.pct >= 40 ? 'color:var(--warn)' : day.hasData ? 'color:var(--overdue)' : 'color:var(--text-muted)'"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Bar chart -->
+          <div class="glass rounded-2xl p-4 mb-4">
+            <p class="text-xs mb-3" style="color:var(--text-muted)">WEEKLY ADHERENCE</p>
+            <div class="chart-container">
+              <canvas id="weekChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Selected day detail -->
+          <div class="glass rounded-2xl p-4">
+            <p class="text-xs mb-3" style="color:var(--text-muted)" x-text="'TASKS FOR ' + formatDisplayDate(selectedDashDay).toUpperCase()"></p>
+            <template x-for="task in getTasksForDate(selectedDashDay)" :key="task._uid">
+              <div class="flex items-center gap-3 py-2 border-b" style="border-color:var(--border)">
+                <span x-text="typeStyle(task.type).icon"></span>
+                <span class="flex-1 text-sm" x-text="task.name"></span>
+                <span class="font-mono text-xs" style="color:var(--text-muted)" x-text="task.time"></span>
+                <div class="w-5 h-5 rounded-full flex items-center justify-center"
+                  :style="task.taken ? 'background:var(--success)' : 'background:rgba(255,255,255,0.08)'">
+                  <template x-if="task.taken">
+                    <svg width="10" height="10" fill="none" stroke="#060c1a" stroke-width="3"><path d="M2 5l2.5 2.5L8 2"/></svg>
+                  </template>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+
+      <!-- Monthly calendar -->
+      <template x-if="dashView === 'monthly'">
+        <div class="fade-in">
+          <div class="flex items-center justify-between mb-4">
+            <button @click="shiftMonth(-1)" class="w-9 h-9 rounded-xl glass flex items-center justify-center" style="border:1px solid var(--border)">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <span class="font-display font-bold" x-text="calMonthLabel"></span>
+            <button @click="shiftMonth(1)" :disabled="calOffset >= 0" class="w-9 h-9 rounded-xl glass flex items-center justify-center disabled:opacity-30" style="border:1px solid var(--border)">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+          </div>
+
+          <div class="glass rounded-2xl p-4 mb-4">
+            <div class="grid grid-cols-7 gap-1 mb-2">
+              <template x-for="d in ['Su','Mo','Tu','We','Th','Fr','Sa']">
+                <div class="text-center text-xs py-1" style="color:var(--text-muted)" x-text="d"></div>
+              </template>
+            </div>
+            <div class="grid grid-cols-7 gap-1">
+              <template x-for="cell in calCells" :key="cell.key">
+                <div
+                  class="cal-day mx-auto"
+                  :class="{
+                    'today': cell.isToday,
+                    'selected': cell.dateStr === selectedDashDay,
+                    'has-data': cell.hasData,
+                    'opacity-20': !cell.inMonth
+                  }"
+                  @click="cell.inMonth && (selectedDashDay = cell.dateStr)"
+                >
+                  <span class="text-xs" x-text="cell.day || ''"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Monthly stats -->
+          <div class="grid grid-cols-3 gap-3 mb-4">
+            <div class="glass rounded-2xl p-4 text-center">
+              <div class="font-display font-bold text-2xl" style="color:var(--accent)" x-text="monthStats.avg + '%'"></div>
+              <div class="text-xs mt-1" style="color:var(--text-muted)">Avg Adherence</div>
+            </div>
+            <div class="glass rounded-2xl p-4 text-center">
+              <div class="font-display font-bold text-2xl" style="color:var(--success)" x-text="monthStats.best + '%'"></div>
+              <div class="text-xs mt-1" style="color:var(--text-muted)">Best Day</div>
+            </div>
+            <div class="glass rounded-2xl p-4 text-center">
+              <div class="font-display font-bold text-2xl" style="color:var(--warn)" x-text="monthStats.streak"></div>
+              <div class="text-xs mt-1" style="color:var(--text-muted)">Day Streak</div>
+            </div>
+          </div>
+
+          <!-- Month bar chart -->
+          <div class="glass rounded-2xl p-4">
+            <p class="text-xs mb-3" style="color:var(--text-muted)">MONTHLY TREND</p>
+            <div class="chart-container">
+              <canvas id="monthChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- ── MANAGEMENT view ── -->
+    <div x-show="mainTab === 'manage'" class="fade-in">
+
+      <!-- Patients list -->
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-display font-bold text-lg">Patients</h2>
+        <button @click="openNewPatient()" class="btn-primary text-sm px-4 py-2">+ Add Patient</button>
+      </div>
+
+      <div class="space-y-3">
+        <template x-for="p in patients" :key="p.id">
+          <div class="glass rounded-2xl p-4" style="border:1px solid var(--border)">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm glass-bright" style="color:var(--accent)" x-text="p.name.charAt(0)"></div>
+                <div>
+                  <div class="font-semibold" x-text="p.name"></div>
+                  <div class="text-xs font-mono mt-0.5" style="color:var(--text-muted)" x-text="p.id + ' · ' + p.email"></div>
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <button @click="editPatient(p)" class="btn-ghost text-xs px-3 py-2">Edit</button>
+                <button @click="confirmDeletePatient(p)" class="btn-danger">Delete</button>
+              </div>
+            </div>
+
+            <!-- Meds preview -->
+            <div class="mt-3 flex flex-wrap gap-2">
+              <template x-for="m in p.meds.slice(0,4)" :key="m.name + m.time">
+                <div class="pill" :class="'pill-' + m.type">
+                  <span x-text="typeStyle(m.type).icon + ' ' + m.name"></span>
+                </div>
+              </template>
+              <template x-if="p.meds.length > 4">
+                <div class="pill" style="background:rgba(255,255,255,0.05); color:var(--text-muted); border-color:var(--border)">
+                  +<span x-text="p.meds.length - 4"></span> more
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Bottom Nav ── -->
+<nav x-show="view !== 'login'" class="fixed bottom-0 left-0 right-0 z-50 glass border-t pb-safe" style="border-color:var(--border)">
+  <div class="max-w-lg mx-auto flex">
+    <button @click="mainTab='today'" class="nav-tab flex-1 flex flex-col items-center gap-1 py-3" :class="{active: mainTab==='today'}">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      <span class="text-xs">Today</span>
+    </button>
+    <button @click="mainTab='dashboard'; initCharts()" class="nav-tab flex-1 flex flex-col items-center gap-1 py-3" :class="{active: mainTab==='dashboard'}">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span class="text-xs">Reports</span>
+    </button>
+    <button x-show="isAdmin" @click="mainTab='manage'" class="nav-tab flex-1 flex flex-col items-center gap-1 py-3" :class="{active: mainTab==='manage'}">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4"/><path d="M16 19l2 2 4-4"/></svg>
+      <span class="text-xs">Manage</span>
+    </button>
+    <button @click="doLogout()" class="nav-tab flex-1 flex flex-col items-center gap-1 py-3">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      <span class="text-xs">Logout</span>
+    </button>
+  </div>
+</nav>
+
+<!-- ═══════════════════ PATIENT PICKER ═══════════════════ -->
+<div x-show="openPatientPicker" @click.self="openPatientPicker=false" class="modal-overlay" x-transition>
+  <div class="modal-box">
+    <h3 class="font-display font-bold text-xl mb-4">Select Patient</h3>
+    <div class="space-y-2">
+      <template x-for="p in patients" :key="p.id">
+        <button @click="activePatient=p; openPatientPicker=false; loadViewTasks()"
+          class="w-full flex items-center gap-3 p-4 rounded-xl transition-all text-left"
+          :style="activePatient?.id === p.id ? 'background:rgba(99,232,228,0.1); border:1px solid var(--border-bright)' : 'background:var(--bg-card); border:1px solid var(--border)'">
+          <div class="w-10 h-10 rounded-xl glass-bright flex items-center justify-center font-bold" style="color:var(--accent)" x-text="p.name.charAt(0)"></div>
+          <div>
+            <div class="font-semibold" x-text="p.name"></div>
+            <div class="text-xs font-mono" style="color:var(--text-muted)" x-text="p.id"></div>
+          </div>
+          <template x-if="activePatient?.id === p.id">
+            <svg class="ml-auto" width="16" height="16" fill="none" stroke="var(--accent)" stroke-width="3"><path d="M3 8l3.5 3.5L13 4"/></svg>
+          </template>
+        </button>
+      </template>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ PATIENT EDIT MODAL ═══════════════════ -->
+<div x-show="patientModal" @click.self="patientModal=false" class="modal-overlay" x-transition>
+  <div class="modal-box">
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="font-display font-bold text-xl" x-text="editingPatient?.id ? 'Edit Patient' : 'New Patient'"></h3>
+      <button @click="patientModal=false" class="w-8 h-8 rounded-lg glass flex items-center justify-center">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 2l10 10M12 2L2 12"/></svg>
+      </button>
+    </div>
+
+    <div class="space-y-4">
+      <div>
+        <label class="text-xs mb-1.5 block" style="color:var(--text-muted)">FULL NAME</label>
+        <input x-model="editForm.name" type="text" class="input-field" placeholder="Patient full name">
+      </div>
+      <div>
+        <label class="text-xs mb-1.5 block" style="color:var(--text-muted)">PATIENT ID</label>
+        <input x-model="editForm.id" type="text" class="input-field" placeholder="e.g. P-101" :disabled="!!editingPatient?.id">
+      </div>
+      <div>
+        <label class="text-xs mb-1.5 block" style="color:var(--text-muted)">EMAIL</label>
+        <input x-model="editForm.email" type="email" class="input-field" placeholder="patient@email.com">
+      </div>
+
+      <!-- Medications / tasks -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-xs" style="color:var(--text-muted)">SCHEDULE</label>
+          <button @click="addMedRow()" class="text-xs" style="color:var(--accent)">+ Add Task</button>
+        </div>
+        <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
+          <template x-for="(med, mi) in editForm.meds" :key="mi">
+            <div class="glass rounded-xl p-3 space-y-2" style="border:1px solid var(--border)">
+              <div class="flex gap-2">
+                <select x-model="med.type" class="input-field text-sm py-2">
+                  <option value="med">💊 Med</option>
+                  <option value="eat">🍽️ Nutrition</option>
+                  <option value="hygiene">🫧 Hygiene</option>
+                  <option value="activity">🏃 Activity</option>
+                </select>
+                <input x-model="med.time" type="time" class="input-field text-sm py-2">
+                <button @click="editForm.meds.splice(mi,1)" class="text-red-400 px-2">✕</button>
+              </div>
+              <div class="flex gap-2">
+                <input x-model="med.name" type="text" class="input-field text-sm py-2" placeholder="Name">
+                <input x-model="med.dose" type="text" class="input-field text-sm py-2" placeholder="Dose (opt)">
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <div x-show="formError" class="text-sm text-red-400 bg-red-400/10 rounded-lg px-3 py-2" x-text="formError"></div>
+
+      <div class="flex gap-3 pt-2">
+        <button @click="patientModal=false" class="btn-ghost flex-1">Cancel</button>
+        <button @click="savePatient()" class="btn-primary flex-1">Save Patient</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ CONFIRM DELETE MODAL ═══════════════════ -->
+<div x-show="deleteConfirm" @click.self="deleteConfirm=false" class="modal-overlay" x-transition>
+  <div class="modal-box max-w-xs text-center">
+    <div class="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center" style="background:rgba(255,107,107,0.1)">
+      <svg width="24" height="24" fill="none" stroke="var(--overdue)" stroke-width="2"><path d="M3 6h18M19 6l-1 14H6L5 6M8 6V4h8v2"/></svg>
+    </div>
+    <h3 class="font-display font-bold text-xl mb-2">Delete Patient?</h3>
+    <p class="text-sm mb-6" style="color:var(--text-muted)" x-text="'This will permanently remove ' + deleteTarget?.name"></p>
+    <div class="flex gap-3">
+      <button @click="deleteConfirm=false" class="btn-ghost flex-1">Cancel</button>
+      <button @click="doDeletePatient()" class="flex-1 py-3 rounded-xl font-semibold text-sm" style="background:rgba(255,107,107,0.15); color:var(--overdue); border:1px solid rgba(255,107,107,0.3)">Delete</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// ─────────────────────────────────────────────────────────────
+// CARESYNC — Alpine.js Application
+// ─────────────────────────────────────────────────────────────
+
+function careSync() {
+  return {
+    // ── State ──────────────────────────────────────
+    view: 'login',
+    mainTab: 'today',
+    isAdmin: false,
+    isDark: true,
+
+    loginInput: '',
+    loginError: '',
+    adminPass: '',
+    adminError: '',
+
+    patients: [],
+    activePatient: null,
+
+    viewDate: '',         // ISO YYYY-MM-DD
+    viewTasks: [],        // tasks for current viewDate
+
+    dashView: 'weekly',
+    weekOffset: 0,
+    calOffset: 0,
+    selectedDashDay: '',
+
+    openPatientPicker: false,
+    patientModal: false,
+    editingPatient: null,
+    editForm: { name:'', id:'', email:'', meds:[] },
+    formError: '',
+
+    deleteConfirm: false,
+    deleteTarget: null,
+
+    overdueTimer: null,
+    chartWeek: null,
+    chartMonth: null,
+
+    // ── Init ───────────────────────────────────────
+    init() {
+      // Load saved theme preference
+      const savedTheme = localStorage.getItem('cs_theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      this.isDark = savedTheme ? savedTheme === 'dark' : prefersDark;
+      this.applyTheme();
+
+      this.loadPatients();
+      this.viewDate = this.todayStr();
+      this.selectedDashDay = this.todayStr();
+      this.startOverdueWatcher();
+    },
+
+    toggleTheme() {
+      this.isDark = !this.isDark;
+      localStorage.setItem('cs_theme', this.isDark ? 'dark' : 'light');
+      this.applyTheme();
+      // Refresh charts with new colors
+      if (this.mainTab === 'dashboard') {
+        this.$nextTick(() => { this.updateWeekChart(); this.updateMonthChart(); });
+      }
+    },
+
+    applyTheme() {
+      document.documentElement.setAttribute('data-theme', this.isDark ? 'dark' : 'light');
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', this.isDark ? '#0a0f1e' : '#f0f4f8');
+    },
+
+    // ── Auth ───────────────────────────────────────
+    doLogin() {
+      this.loginError = '';
+      const v = this.loginInput.trim().toLowerCase();
+      const p = this.patients.find(pt =>
+        pt.name.toLowerCase() === v ||
+        pt.id.toLowerCase() === v ||
+        pt.email.toLowerCase() === v
+      );
+      if (!p) { this.loginError = 'No matching patient found.'; return; }
+      this.activePatient = p;
+      this.isAdmin = false;
+      this.view = 'app';
+      this.mainTab = 'today';
+      this.loadViewTasks();
+    },
+
+    doAdminLogin() {
+      this.adminError = '';
+      if (this.adminPass === '!ronMan') {
+        this.isAdmin = true;
+        this.view = 'app';
+        this.mainTab = 'manage';
+        if (!this.activePatient && this.patients.length) this.activePatient = this.patients[0];
+      } else {
+        this.adminError = 'Invalid passcode.';
+      }
+    },
+
+    doLogout() {
+      this.view = 'login';
+      this.loginInput = '';
+      this.adminPass = '';
+      this.loginError = '';
+      this.adminError = '';
+      this.isAdmin = false;
+      this.activePatient = null;
+    },
+
+    // ── Patients (CRUD) ────────────────────────────
+    loadPatients() {
+      const raw = localStorage.getItem('cs_patients');
+      if (raw) {
+        this.patients = JSON.parse(raw);
+      } else {
+        this.patients = defaultPatients();
+        this.savePatientsToDB();
+      }
+    },
+
+    savePatientsToDB() {
+      localStorage.setItem('cs_patients', JSON.stringify(this.patients));
+    },
+
+    openNewPatient() {
+      this.editingPatient = null;
+      this.editForm = { name:'', id:'', email:'', meds: [] };
+      this.formError = '';
+      this.patientModal = true;
+    },
+
+    editPatient(p) {
+      this.editingPatient = p;
+      this.editForm = {
+        name: p.name,
+        id: p.id,
+        email: p.email,
+        meds: p.meds.map(m => ({ ...m }))
+      };
+      this.formError = '';
+      this.patientModal = true;
+    },
+
+    addMedRow() {
+      this.editForm.meds.push({ type:'med', name:'', dose:'', time:'08:00', taken:false });
+    },
+
+    savePatient() {
+      this.formError = '';
+      const { name, id, email, meds } = this.editForm;
+      if (!name.trim()) { this.formError = 'Name is required.'; return; }
+      if (!id.trim()) { this.formError = 'Patient ID is required.'; return; }
+
+      if (this.editingPatient) {
+        const idx = this.patients.findIndex(p => p.id === this.editingPatient.id);
+        if (idx >= 0) {
+          this.patients[idx] = { id: id.trim(), name: name.trim(), email: email.trim(), meds };
+          if (this.activePatient?.id === this.editingPatient.id) {
+            this.activePatient = this.patients[idx];
+          }
         }
-    </script>
+      } else {
+        if (this.patients.find(p => p.id === id.trim())) {
+          this.formError = 'Patient ID already exists.'; return;
+        }
+        this.patients.push({ id: id.trim(), name: name.trim(), email: email.trim(), meds });
+      }
+
+      this.savePatientsToDB();
+      this.patientModal = false;
+      this.loadViewTasks();
+    },
+
+    confirmDeletePatient(p) {
+      this.deleteTarget = p;
+      this.deleteConfirm = true;
+    },
+
+    doDeletePatient() {
+      this.patients = this.patients.filter(p => p.id !== this.deleteTarget.id);
+      if (this.activePatient?.id === this.deleteTarget.id) this.activePatient = this.patients[0] || null;
+      this.savePatientsToDB();
+      this.deleteConfirm = false;
+      this.loadViewTasks();
+    },
+
+    // ── Daily Tasks ────────────────────────────────
+    loadViewTasks() {
+      if (!this.activePatient) { this.viewTasks = []; return; }
+
+      // Load from persisted log or clone master meds
+      const logKey = `cs_log_${this.activePatient.id}_${this.viewDate}`;
+      const saved = localStorage.getItem(logKey);
+      if (saved) {
+        this.viewTasks = JSON.parse(saved);
+      } else {
+        this.viewTasks = this.activePatient.meds.map((m, i) => ({
+          ...m,
+          _uid: `${this.viewDate}_${i}`,
+          taken: false,
+          takenAt: null
+        })).sort((a,b) => a.time.localeCompare(b.time));
+        if (this.isToday(this.viewDate)) this.saveViewLog();
+      }
+    },
+
+    saveViewLog() {
+      const logKey = `cs_log_${this.activePatient.id}_${this.viewDate}`;
+      localStorage.setItem(logKey, JSON.stringify(this.viewTasks));
+    },
+
+    toggleTask(task) {
+      if (!this.isToday(this.viewDate)) return;
+      task.taken = !task.taken;
+      task.takenAt = task.taken ? new Date().toISOString() : null;
+      this.saveViewLog();
+    },
+
+    getStatus(task) {
+      if (task.taken) return 'done';
+      if (!this.isToday(this.viewDate)) {
+        // Historical — show as missed
+        const now = new Date();
+        const [h,m] = task.time.split(':').map(Number);
+        const scheduled = new Date(this.viewDate);
+        scheduled.setHours(h,m,0,0);
+        if (scheduled < now) return 'overdue';
+        return 'pending';
+      }
+      const now = new Date();
+      const [h,m] = task.time.split(':').map(Number);
+      const scheduled = new Date();
+      scheduled.setHours(h,m,0,0);
+      if (now - scheduled > 15 * 60 * 1000) return 'overdue';
+      return 'pending';
+    },
+
+    get completedCount() {
+      return this.viewTasks.filter(t => t.taken).length;
+    },
+
+    get adherencePct() {
+      if (!this.viewTasks.length) return 0;
+      return Math.round((this.completedCount / this.viewTasks.length) * 100);
+    },
+
+    get overdueCount() {
+      return this.viewTasks.filter(t => this.getStatus(t) === 'overdue').length;
+    },
+
+    startOverdueWatcher() {
+      clearInterval(this.overdueTimer);
+      this.overdueTimer = setInterval(() => {
+        // Force reactivity by touch
+        this.viewTasks = [...this.viewTasks];
+      }, 30000);
+    },
+
+    // ── Date helpers ───────────────────────────────
+    todayStr() {
+      return new Date().toISOString().slice(0,10);
+    },
+
+    isToday(d) {
+      return d === this.todayStr();
+    },
+
+    formatDisplayDate(d) {
+      if (!d) return '';
+      const dt = new Date(d + 'T12:00:00');
+      return dt.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+    },
+
+    dayOfWeek(d) {
+      if (!d) return '';
+      return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday:'long' });
+    },
+
+    shiftDay(delta) {
+      const d = new Date(this.viewDate + 'T12:00:00');
+      d.setDate(d.getDate() + delta);
+      const newStr = d.toISOString().slice(0,10);
+      if (newStr > this.todayStr()) return;
+      this.viewDate = newStr;
+      this.loadViewTasks();
+    },
+
+    // ── Dashboard helpers ──────────────────────────
+    get weekDays() {
+      const days = [];
+      const base = new Date();
+      base.setDate(base.getDate() + this.weekOffset * 7);
+      // get Monday of that week
+      const dow = base.getDay();
+      const monday = new Date(base);
+      monday.setDate(base.getDate() - ((dow + 6) % 7));
+
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        const dateStr = d.toISOString().slice(0,10);
+        const pct = this.getAdherenceForDate(dateStr);
+        days.push({
+          dateStr,
+          label: ['Mo','Tu','We','Th','Fr','Sa','Su'][i],
+          num: d.getDate(),
+          isToday: dateStr === this.todayStr(),
+          pct,
+          hasData: pct !== null
+        });
+      }
+      return days;
+    },
+
+    get weekLabel() {
+      const days = this.weekDays;
+      if (!days.length) return '';
+      const first = new Date(days[0].dateStr + 'T12:00:00');
+      const last = new Date(days[6].dateStr + 'T12:00:00');
+      const fmt = d => d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      return `${fmt(first)} – ${fmt(last)}`;
+    },
+
+    shiftWeek(delta) {
+      if (this.weekOffset + delta > 0) return;
+      this.weekOffset += delta;
+      this.$nextTick(() => this.updateWeekChart());
+    },
+
+    getAdherenceForDate(dateStr) {
+      if (!this.activePatient) return null;
+      const logKey = `cs_log_${this.activePatient.id}_${dateStr}`;
+      const saved = localStorage.getItem(logKey);
+      if (!saved) return null;
+      const tasks = JSON.parse(saved);
+      if (!tasks.length) return null;
+      return Math.round((tasks.filter(t=>t.taken).length / tasks.length)*100);
+    },
+
+    getTasksForDate(dateStr) {
+      if (!this.activePatient) return [];
+      const logKey = `cs_log_${this.activePatient.id}_${dateStr}`;
+      const saved = localStorage.getItem(logKey);
+      if (saved) return JSON.parse(saved).sort((a,b)=>a.time.localeCompare(b.time));
+      // fallback to master
+      return this.activePatient.meds.map((m,i) => ({...m, _uid:`${dateStr}_${i}`, taken:false})).sort((a,b)=>a.time.localeCompare(b.time));
+    },
+
+    // Monthly
+    get calCells() {
+      const now = new Date();
+      now.setMonth(now.getMonth() + this.calOffset);
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month+1, 0);
+      const cells = [];
+
+      // pad start
+      let startDow = firstDay.getDay();
+      for (let i = 0; i < startDow; i++) {
+        const d = new Date(firstDay);
+        d.setDate(d.getDate() - (startDow - i));
+        cells.push({ key: 'p'+i, day: d.getDate(), inMonth: false, dateStr: d.toISOString().slice(0,10), isToday:false, hasData:false });
+      }
+
+      for (let d = 1; d <= lastDay.getDate(); d++) {
+        const dt = new Date(year, month, d);
+        const dateStr = dt.toISOString().slice(0,10);
+        cells.push({
+          key: dateStr, day: d, inMonth: true, dateStr,
+          isToday: dateStr === this.todayStr(),
+          hasData: this.getAdherenceForDate(dateStr) !== null
+        });
+      }
+
+      // pad end
+      const rem = 42 - cells.length;
+      for (let i = 1; i <= rem; i++) {
+        const d = new Date(lastDay);
+        d.setDate(d.getDate() + i);
+        cells.push({ key: 'n'+i, day: d.getDate(), inMonth: false, dateStr: d.toISOString().slice(0,10), isToday:false, hasData:false });
+      }
+      return cells;
+    },
+
+    get calMonthLabel() {
+      const now = new Date();
+      now.setMonth(now.getMonth() + this.calOffset);
+      return now.toLocaleDateString('en-US', { month:'long', year:'numeric' });
+    },
+
+    shiftMonth(delta) {
+      if (this.calOffset + delta > 0) return;
+      this.calOffset += delta;
+      this.$nextTick(() => this.updateMonthChart());
+    },
+
+    get monthStats() {
+      const cells = this.calCells.filter(c => c.inMonth && new Date(c.dateStr + 'T12:00:00') <= new Date());
+      const pcts = cells.map(c => this.getAdherenceForDate(c.dateStr)).filter(p => p !== null);
+      if (!pcts.length) return { avg: 0, best: 0, streak: 0 };
+
+      const avg = Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length);
+      const best = Math.max(...pcts);
+
+      // streak (consecutive days with >= 80%)
+      let streak = 0;
+      const todayCells = cells.filter(c => c.dateStr <= this.todayStr()).reverse();
+      for (const c of todayCells) {
+        const p = this.getAdherenceForDate(c.dateStr);
+        if (p !== null && p >= 80) streak++;
+        else break;
+      }
+      return { avg, best, streak };
+    },
+
+    // ── Charts ─────────────────────────────────────
+    initCharts() {
+      this.$nextTick(() => {
+        this.updateWeekChart();
+        this.updateMonthChart();
+      });
+    },
+
+    updateWeekChart() {
+      const canvas = document.getElementById('weekChart');
+      if (!canvas) return;
+      if (this.chartWeek) this.chartWeek.destroy();
+
+      const labels = this.weekDays.map(d => d.label);
+      const data = this.weekDays.map(d => d.pct ?? 0);
+      const colors = data.map(v => v >= 80 ? '#4ade80' : v >= 50 ? '#fbbf24' : '#ff6b6b');
+      const tickColor = this.isDark ? 'rgba(232,244,243,0.45)' : 'rgba(15,31,46,0.45)';
+      const gridColor = this.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
+
+      this.chartWeek = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            data,
+            backgroundColor: colors,
+            borderRadius: 6,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: tickColor, font: { family: 'DM Mono', size: 11 } } },
+            y: {
+              min: 0, max: 100,
+              grid: { color: gridColor },
+              ticks: { color: tickColor, font: { family: 'DM Mono', size: 10 }, callback: v => v + '%' }
+            }
+          }
+        }
+      });
+    },
+
+    updateMonthChart() {
+      const canvas = document.getElementById('monthChart');
+      if (!canvas) return;
+      if (this.chartMonth) this.chartMonth.destroy();
+
+      const cells = this.calCells.filter(c => c.inMonth && c.dateStr <= this.todayStr());
+      const labels = cells.map(c => c.day);
+      const data = cells.map(c => this.getAdherenceForDate(c.dateStr) ?? 0);
+      const accentColor = this.isDark ? '#63e8e4' : '#0e9e98';
+      const tickColor = this.isDark ? 'rgba(232,244,243,0.45)' : 'rgba(15,31,46,0.45)';
+      const gridColor = this.isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)';
+
+      this.chartMonth = new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            data,
+            borderColor: accentColor,
+            backgroundColor: this.isDark ? 'rgba(99,232,228,0.07)' : 'rgba(14,165,155,0.07)',
+            borderWidth: 2,
+            pointRadius: 3,
+            pointBackgroundColor: accentColor,
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: tickColor, font: { family: 'DM Mono', size: 10 }, maxTicksLimit: 10 } },
+            y: {
+              min: 0, max: 100,
+              grid: { color: gridColor },
+              ticks: { color: tickColor, font: { family: 'DM Mono', size: 10 }, callback: v => v + '%' }
+            }
+          }
+        }
+      });
+    },
+
+    // ── UI helpers ─────────────────────────────────
+    typeStyle(type) {
+      const map = {
+        med:      { icon: '💊', bg: 'background: rgba(167,139,250,0.12)' },
+        eat:      { icon: '🍽️', bg: 'background: rgba(251,191,36,0.10)' },
+        hygiene:  { icon: '🫧', bg: 'background: rgba(99,232,228,0.10)' },
+        activity: { icon: '🏃', bg: 'background: rgba(244,114,182,0.10)' }
+      };
+      return map[type] || map.med;
+    }
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
+// Default seed data
+// ─────────────────────────────────────────────────────────────
+function defaultPatients() {
+  const today = new Date().toISOString().slice(0,10);
+
+  const patients = [
+    {
+      id: 'P-100',
+      name: 'Maria Santos',
+      email: 'maria@caresync.app',
+      meds: [
+        { type:'med',      name:'Metformin',       dose:'500mg',   time:'07:00', taken:false },
+        { type:'med',      name:'Lisinopril',       dose:'10mg',    time:'07:00', taken:false },
+        { type:'eat',      name:'Breakfast',        dose:'',        time:'08:00', taken:false },
+        { type:'hygiene',  name:'Morning Hygiene',  dose:'',        time:'09:00', taken:false },
+        { type:'med',      name:'Aspirin',          dose:'81mg',    time:'12:00', taken:false },
+        { type:'eat',      name:'Lunch',            dose:'',        time:'12:30', taken:false },
+        { type:'activity', name:'Afternoon Walk',   dose:'20 min',  time:'16:00', taken:false },
+        { type:'eat',      name:'Dinner',           dose:'',        time:'18:30', taken:false },
+        { type:'med',      name:'Metformin',        dose:'500mg',   time:'19:00', taken:false },
+        { type:'hygiene',  name:'Evening Hygiene',  dose:'',        time:'20:00', taken:false },
+        { type:'activity', name:'Evening Nap',      dose:'30 min',  time:'14:00', taken:false },
+      ]
+    },
+    {
+      id: 'P-101',
+      name: 'Jose Reyes',
+      email: 'jose@caresync.app',
+      meds: [
+        { type:'med',      name:'Amlodipine',       dose:'5mg',     time:'07:30', taken:false },
+        { type:'eat',      name:'Breakfast',        dose:'',        time:'08:30', taken:false },
+        { type:'med',      name:'Atorvastatin',     dose:'20mg',    time:'09:00', taken:false },
+        { type:'eat',      name:'Snack',            dose:'',        time:'11:00', taken:false },
+        { type:'eat',      name:'Lunch',            dose:'',        time:'13:00', taken:false },
+        { type:'activity', name:'Physical Therapy', dose:'45 min',  time:'15:00', taken:false },
+        { type:'eat',      name:'Dinner',           dose:'',        time:'19:00', taken:false },
+        { type:'hygiene',  name:'Bath',             dose:'',        time:'20:00', taken:false },
+      ]
+    }
+  ];
+
+  // Seed some historical log data so charts look populated
+  patients.forEach(p => {
+    for (let daysBack = 14; daysBack >= 1; daysBack--) {
+      const d = new Date();
+      d.setDate(d.getDate() - daysBack);
+      const dateStr = d.toISOString().slice(0,10);
+      const logKey = `cs_log_${p.id}_${dateStr}`;
+      if (!localStorage.getItem(logKey)) {
+        const adherence = 0.5 + Math.random() * 0.5;
+        const tasks = p.meds.map((m,i) => ({
+          ...m,
+          _uid: `${dateStr}_${i}`,
+          taken: Math.random() < adherence,
+          takenAt: null
+        }));
+        localStorage.setItem(logKey, JSON.stringify(tasks));
+      }
+    }
+  });
+
+  return patients;
+}
+</script>
 </body>
 </html>
