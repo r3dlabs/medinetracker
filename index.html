@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="theme-color" content="#0a0f1e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -796,7 +799,7 @@
                   <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm glass-bright" style="color:var(--accent)" x-text="p.name.charAt(0)"></div>
                   <div>
                     <div class="font-semibold" x-text="p.name"></div>
-                    <div class="text-xs font-mono mt-0.5" style="color:var(--text-muted)" x-text="p.id + ' · ' + (p.email || '—')"></div>
+                    <div class="text-xs mt-0.5" style="color:var(--text-muted)" x-text="p.email || 'No email'"></div>
                   </div>
                 </div>
                 <div class="flex gap-2">
@@ -895,7 +898,7 @@
       <!-- Search -->
       <div class="relative mb-4">
         <input x-model="patientSearch" @input.debounce.400ms="searchPatients()"
-          type="text" class="input-field pr-10" placeholder="Search by patient name or ID…">
+          type="text" class="input-field pr-10" placeholder="Search by patient name…">
         <div class="absolute right-3 top-1/2 -translate-y-1/2" style="color:var(--text-muted)">
           <template x-if="!searchLoading">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -914,7 +917,6 @@
               <div class="w-10 h-10 rounded-xl glass-bright flex items-center justify-center font-bold flex-shrink-0" style="color:var(--accent)" x-text="p.name.charAt(0)"></div>
               <div class="flex-1 min-w-0">
                 <div class="font-semibold text-sm" x-text="p.name"></div>
-                <div class="text-xs font-mono" style="color:var(--text-muted)" x-text="p.id"></div>
               </div>
               <template x-if="getMyRequestStatus(p.id) === 'approved'">
                 <span class="pill text-xs" style="background:rgba(74,222,128,0.15);color:var(--success);border-color:rgba(74,222,128,0.3)">✓ Access granted</span>
@@ -1010,7 +1012,7 @@
           <div class="w-10 h-10 rounded-xl glass-bright flex items-center justify-center font-bold" style="color:var(--accent)" x-text="p.name.charAt(0)"></div>
           <div>
             <div class="font-semibold" x-text="p.name"></div>
-            <div class="text-xs font-mono" style="color:var(--text-muted)" x-text="p.id"></div>
+            <div class="text-xs" style="color:var(--text-muted)" x-text="p.email || 'No email on file'"></div>
           </div>
           <template x-if="activePatient?.id === p.id">
             <svg class="ml-auto" width="16" height="16" fill="none" stroke="var(--accent)" stroke-width="3"><path d="M3 8l3.5 3.5L13 4"/></svg>
@@ -1037,11 +1039,7 @@
         <input x-model="editForm.name" type="text" class="input-field" placeholder="Patient full name">
       </div>
       <div>
-        <label class="text-xs mb-1.5 block" style="color:var(--text-muted)">PATIENT ID</label>
-        <input x-model="editForm.id" type="text" class="input-field" placeholder="e.g. P-101" :disabled="!!editingPatient?.id">
-      </div>
-      <div>
-        <label class="text-xs mb-1.5 block" style="color:var(--text-muted)">EMAIL</label>
+        <label class="text-xs mb-1.5 block" style="color:var(--text-muted)">EMAIL <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
         <input x-model="editForm.email" type="email" class="input-field" placeholder="patient@email.com">
       </div>
 
@@ -1254,7 +1252,7 @@ function careSync() {
     openPatientPicker: false,
     patientModal: false,
     editingPatient: null,
-    editForm: { name:'', id:'', email:'', meds:[] },
+    editForm: { name:'', email:'', meds:[] },
     formError: '',
 
     // Delete confirm
@@ -1482,14 +1480,14 @@ function careSync() {
     // ── Manager: Patient CRUD ──────────────────────
     async openNewPatient() {
       this.editingPatient = null;
-      this.editForm = { name:'', id:'', email:'', meds:[] };
+      this.editForm = { name:'', email:'', meds:[] };
       this.formError = '';
       this.patientModal = true;
     },
 
     async editPatient(p) {
       this.editingPatient = p;
-      this.editForm = { name: p.name, id: p.id, email: p.email || '', meds: p.meds.map(m => ({ ...m })) };
+      this.editForm = { name: p.name, email: p.email || '', meds: p.meds.map(m => ({ ...m })) };
       this.formError = '';
       this.patientModal = true;
     },
@@ -1500,13 +1498,13 @@ function careSync() {
 
     async savePatient() {
       this.formError = '';
-      const { name, id, email, meds } = this.editForm;
+      const { name, email, meds } = this.editForm;
       if (!name.trim()) { this.formError = 'Name is required.'; return; }
-      if (!id.trim())   { this.formError = 'Patient ID is required.'; return; }
 
       if (this.editingPatient) {
+        // Update existing patient
         const { error } = await sb.from('patients')
-          .update({ name: name.trim(), email: email.trim(), updated_at: new Date().toISOString() })
+          .update({ name: name.trim(), email: email.trim() || null, updated_at: new Date().toISOString() })
           .eq('id', this.editingPatient.id);
         if (error) { this.formError = error.message; return; }
 
@@ -1521,19 +1519,16 @@ function careSync() {
           );
         }
       } else {
-        const { data: existing } = await sb.from('patients').select('id').eq('id', id.trim()).maybeSingle();
-        if (existing) { this.formError = 'Patient ID already exists.'; return; }
-
-        const { error } = await sb.from('patients').insert({
-          id: id.trim(), name: name.trim(), email: email.trim(),
-          created_by: this.authUser.id
-        });
+        // Insert new patient — DB auto-generates the ID via trigger
+        const { data: newPatient, error } = await sb.from('patients')
+          .insert({ name: name.trim(), email: email.trim() || null, created_by: this.authUser.id })
+          .select('id').single();
         if (error) { this.formError = error.message; return; }
 
         if (meds.length) {
           await sb.from('meds').insert(
             meds.map((m, i) => ({
-              patient_id: id.trim(),
+              patient_id: newPatient.id,
               type: m.type, name: m.name.trim(),
               dose: m.dose || null, time: m.time, sort_order: i, active: true
             }))
