@@ -1679,8 +1679,12 @@ function careSync() {
       const q = this.patientSearch.trim();
       if (q.length < 2) { this.patientResults = []; return; }
       this.searchLoading = true;
-      const { data } = await sb.from('patients').select('id, name')
-        .or(`name.ilike.%${q}%,id.ilike.%${q}%`).limit(8);
+      const { data, error } = await sb
+        .from('patients')
+        .select('id, name, email')
+        .ilike('name', `%${q}%`)
+        .limit(10);
+      if (error) console.error('searchPatients error:', error);
       this.patientResults = data || [];
       this.searchLoading = false;
     },
