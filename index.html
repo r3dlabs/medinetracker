@@ -123,6 +123,7 @@
     flex-shrink: 0;
   }
   .theme-toggle:hover { border-color: var(--accent); background: var(--input-focus-bg); }
+  .theme-toggle.fs-active { border-color: var(--accent); color: var(--accent); }
 
   /* Typography */
   .font-display { font-family: 'Syne', sans-serif; }
@@ -352,9 +353,21 @@
 <body x-data="careSync()" x-init="init()">
 
 <!-- ═══════════════════ LOGIN SCREEN ═══════════════════ -->
-<div x-show="view === 'login'" x-transition class="min-h-screen flex items-center justify-center p-6 relative z-10">
+<div x-show="view === 'login'" x-transition class="min-h-screen flex items-center justify-center px-4 py-8 sm:p-6 relative z-10">
   <!-- Theme toggle top-right on login -->
-  <div class="fixed top-4 right-4 z-50">
+  <div class="fixed top-4 right-4 z-50 flex items-center gap-2">
+    <button @click="toggleFullscreen()" class="theme-toggle" :title="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'">
+      <template x-if="!isFullscreen">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24">
+          <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
+        </svg>
+      </template>
+      <template x-if="isFullscreen">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24">
+          <path d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"/>
+        </svg>
+      </template>
+    </button>
     <button @click="toggleTheme()" class="theme-toggle">
       <span x-text="isDark ? '☀️' : '🌙'"></span>
     </button>
@@ -362,7 +375,7 @@
   <div class="w-full max-w-sm">
 
     <!-- Login card -->
-    <div class="glass rounded-2xl p-8 text-center">
+    <div class="glass rounded-2xl p-6 sm:p-8 text-center">
 
       <!-- Logo + wordmark -->
       <div class="flex items-center justify-center gap-3 mb-3">
@@ -443,6 +456,20 @@
         <!-- Theme toggle -->
         <button @click="toggleTheme()" class="theme-toggle" :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'">
           <span x-text="isDark ? '☀️' : '🌙'"></span>
+        </button>
+
+        <!-- Fullscreen toggle -->
+        <button @click="toggleFullscreen()" class="theme-toggle" :title="isFullscreen ? 'Exit fullscreen' : 'Go fullscreen'">
+          <template x-if="!isFullscreen">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24">
+              <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
+            </svg>
+          </template>
+          <template x-if="isFullscreen">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24">
+              <path d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"/>
+            </svg>
+          </template>
         </button>
 
         <!-- Patient selector / user -->
@@ -738,42 +765,203 @@
     <!-- ── MANAGEMENT view ── -->
     <div x-show="mainTab === 'manage'" class="fade-in">
 
-      <!-- Patients list -->
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="font-display font-bold text-lg">Patients</h2>
-        <button @click="openNewPatient()" class="btn-primary text-sm px-4 py-2">+ Add Patient</button>
+      <!-- Sub-tabs: Patients / Access Requests -->
+      <div class="glass rounded-2xl p-1 flex gap-1 mb-4">
+        <button @click="manageSubTab='patients'"
+          class="flex-1 py-2 rounded-xl text-sm font-medium transition-all"
+          :style="manageSubTab==='patients' ? 'background:rgba(99,232,228,0.15);color:var(--accent)' : 'color:var(--text-muted)'">
+          Patients
+        </button>
+        <button @click="manageSubTab='requests'; loadAccessRequests()"
+          class="flex-1 py-2 rounded-xl text-sm font-medium transition-all relative"
+          :style="manageSubTab==='requests' ? 'background:rgba(99,232,228,0.15);color:var(--accent)' : 'color:var(--text-muted)'">
+          Access Requests
+          <template x-if="pendingRequestCount > 0">
+            <span class="absolute top-1 right-3 w-4 h-4 rounded-full text-xs flex items-center justify-center font-bold" style="background:var(--overdue);color:#fff;font-size:9px" x-text="pendingRequestCount"></span>
+          </template>
+        </button>
       </div>
 
-      <div class="space-y-3">
-        <template x-for="p in patients" :key="p.id">
-          <div class="glass rounded-2xl p-4" style="border:1px solid var(--border)">
-            <div class="flex items-start justify-between gap-3">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm glass-bright" style="color:var(--accent)" x-text="p.name.charAt(0)"></div>
-                <div>
-                  <div class="font-semibold" x-text="p.name"></div>
-                  <div class="text-xs font-mono mt-0.5" style="color:var(--text-muted)" x-text="p.id + ' · ' + p.email"></div>
+      <!-- Patients sub-tab -->
+      <div x-show="manageSubTab === 'patients'">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-display font-bold text-lg">Patients</h2>
+          <button @click="openNewPatient()" class="btn-primary text-sm px-4 py-2">+ Add Patient</button>
+        </div>
+        <div class="space-y-3">
+          <template x-for="p in patients" :key="p.id">
+            <div class="glass rounded-2xl p-4" style="border:1px solid var(--border)">
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm glass-bright" style="color:var(--accent)" x-text="p.name.charAt(0)"></div>
+                  <div>
+                    <div class="font-semibold" x-text="p.name"></div>
+                    <div class="text-xs font-mono mt-0.5" style="color:var(--text-muted)" x-text="p.id + ' · ' + (p.email || '—')"></div>
+                  </div>
+                </div>
+                <div class="flex gap-2">
+                  <button @click="editPatient(p)" class="btn-ghost text-xs px-3 py-2">Edit</button>
+                  <button @click="confirmDeletePatient(p)" class="btn-danger">Delete</button>
                 </div>
               </div>
-              <div class="flex gap-2">
-                <button @click="editPatient(p)" class="btn-ghost text-xs px-3 py-2">Edit</button>
-                <button @click="confirmDeletePatient(p)" class="btn-danger">Delete</button>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <template x-for="m in p.meds.slice(0,4)" :key="m.name + m.time">
+                  <div class="pill" :class="'pill-' + m.type">
+                    <span x-text="typeStyle(m.type).icon + ' ' + m.name"></span>
+                  </div>
+                </template>
+                <template x-if="p.meds.length > 4">
+                  <div class="pill" style="background:rgba(255,255,255,0.05); color:var(--text-muted); border-color:var(--border)">
+                    +<span x-text="p.meds.length - 4"></span> more
+                  </div>
+                </template>
+              </div>
+              <!-- Caregiver access list for this patient -->
+              <div class="mt-3 pt-3 border-t" style="border-color:var(--border)">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs" style="color:var(--text-muted)">CAREGIVERS WITH ACCESS</span>
+                </div>
+                <template x-if="!p.caregivers || p.caregivers.length === 0">
+                  <p class="text-xs" style="color:var(--text-muted)">No caregivers assigned yet.</p>
+                </template>
+                <div class="flex flex-wrap gap-2">
+                  <template x-for="cg in (p.caregivers || [])" :key="cg.id">
+                    <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs" style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.2)">
+                      <span style="color:var(--accent2)" x-text="cg.full_name || cg.caregiver_email"></span>
+                      <button @click="revokeAccess(p, cg)" class="hover:text-red-400 transition-colors" style="color:var(--text-muted)" title="Revoke access">✕</button>
+                    </div>
+                  </template>
+                </div>
               </div>
             </div>
+          </template>
+        </div>
+      </div>
 
-            <!-- Meds preview -->
-            <div class="mt-3 flex flex-wrap gap-2">
-              <template x-for="m in p.meds.slice(0,4)" :key="m.name + m.time">
-                <div class="pill" :class="'pill-' + m.type">
-                  <span x-text="typeStyle(m.type).icon + ' ' + m.name"></span>
+      <!-- Access Requests sub-tab -->
+      <div x-show="manageSubTab === 'requests'">
+        <h2 class="font-display font-bold text-lg mb-4">Access Requests</h2>
+        <template x-if="accessRequests.length === 0">
+          <div class="glass rounded-2xl p-8 text-center">
+            <div class="text-3xl mb-3">🔐</div>
+            <p class="font-medium mb-1">No pending requests</p>
+            <p class="text-sm" style="color:var(--text-muted)">Caregivers requesting access to your patients will appear here.</p>
+          </div>
+        </template>
+        <div class="space-y-3">
+          <template x-for="req in accessRequests" :key="req.id">
+            <div class="glass rounded-2xl p-4" style="border:1px solid var(--border)">
+              <div class="flex items-start gap-3 mb-3">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0"
+                  style="background:rgba(167,139,250,0.15);color:var(--accent2)"
+                  x-text="(req.caregiver_name || req.caregiver_email || '?').charAt(0).toUpperCase()"></div>
+                <div class="flex-1 min-w-0">
+                  <div class="font-semibold text-sm" x-text="req.caregiver_name || req.caregiver_email"></div>
+                  <div class="text-xs font-mono mt-0.5" style="color:var(--text-muted)" x-text="req.caregiver_email"></div>
+                  <div class="text-xs mt-1" style="color:var(--text-muted)">
+                    Requesting access to: <span class="font-semibold" style="color:var(--text-primary)" x-text="getPatientName(req.patient_id)"></span>
+                  </div>
+                </div>
+                <span class="pill text-xs flex-shrink-0"
+                  :style="req.status==='pending' ? 'background:rgba(251,191,36,0.15);color:var(--warn);border-color:rgba(251,191,36,0.3)' :
+                          req.status==='approved' ? 'background:rgba(74,222,128,0.15);color:var(--success);border-color:rgba(74,222,128,0.3)' :
+                          'background:rgba(255,107,107,0.15);color:var(--overdue);border-color:rgba(255,107,107,0.3)'"
+                  x-text="req.status"></span>
+              </div>
+              <template x-if="req.reason">
+                <div class="text-xs px-3 py-2 rounded-lg mb-3 italic" style="background:var(--input-bg);color:var(--text-muted)" x-text="'&quot;' + req.reason + '&quot;'"></div>
+              </template>
+              <div class="text-xs mb-3" style="color:var(--text-muted)" x-text="'Requested ' + formatRelative(req.created_at)"></div>
+              <template x-if="req.status === 'pending'">
+                <div class="flex gap-2">
+                  <button @click="denyRequest(req)" class="btn-danger flex-1 text-center py-2">Deny</button>
+                  <button @click="approveRequest(req)" class="btn-primary flex-1 text-center py-2 text-sm">Approve Access</button>
                 </div>
               </template>
-              <template x-if="p.meds.length > 4">
-                <div class="pill" style="background:rgba(255,255,255,0.05); color:var(--text-muted); border-color:var(--border)">
-                  +<span x-text="p.meds.length - 4"></span> more
-                </div>
+              <template x-if="req.status === 'approved'">
+                <button @click="revokeByRequest(req)" class="w-full btn-danger text-center py-2">Revoke Access</button>
               </template>
             </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CAREGIVER ACCESS view ── -->
+    <div x-show="mainTab === 'access'" class="fade-in">
+      <h2 class="font-display font-bold text-lg mb-1">Patient Access</h2>
+      <p class="text-sm mb-5" style="color:var(--text-muted)">Search for a patient and request access to their schedule.</p>
+
+      <!-- Search -->
+      <div class="relative mb-4">
+        <input x-model="patientSearch" @input.debounce.400ms="searchPatients()"
+          type="text" class="input-field pr-10" placeholder="Search by patient name or ID…">
+        <div class="absolute right-3 top-1/2 -translate-y-1/2" style="color:var(--text-muted)">
+          <template x-if="!searchLoading">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          </template>
+          <template x-if="searchLoading">
+            <svg class="animate-spin" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
+          </template>
+        </div>
+      </div>
+
+      <!-- Search results -->
+      <template x-if="patientResults.length > 0">
+        <div class="space-y-2 mb-6">
+          <template x-for="p in patientResults" :key="p.id">
+            <div class="glass rounded-2xl p-4 flex items-center gap-3" style="border:1px solid var(--border)">
+              <div class="w-10 h-10 rounded-xl glass-bright flex items-center justify-center font-bold flex-shrink-0" style="color:var(--accent)" x-text="p.name.charAt(0)"></div>
+              <div class="flex-1 min-w-0">
+                <div class="font-semibold text-sm" x-text="p.name"></div>
+                <div class="text-xs font-mono" style="color:var(--text-muted)" x-text="p.id"></div>
+              </div>
+              <template x-if="getMyRequestStatus(p.id) === 'approved'">
+                <span class="pill text-xs" style="background:rgba(74,222,128,0.15);color:var(--success);border-color:rgba(74,222,128,0.3)">✓ Access granted</span>
+              </template>
+              <template x-if="getMyRequestStatus(p.id) === 'pending'">
+                <span class="pill text-xs" style="background:rgba(251,191,36,0.15);color:var(--warn);border-color:rgba(251,191,36,0.3)">Pending…</span>
+              </template>
+              <template x-if="getMyRequestStatus(p.id) === 'denied'">
+                <span class="pill text-xs" style="background:rgba(255,107,107,0.15);color:var(--overdue);border-color:rgba(255,107,107,0.3)">Denied</span>
+              </template>
+              <template x-if="!getMyRequestStatus(p.id)">
+                <button @click="openRequestModal(p)" class="btn-primary text-xs px-3 py-2">Request Access</button>
+              </template>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- My access & requests -->
+      <div class="mb-2 flex items-center justify-between">
+        <h3 class="font-display font-semibold text-base">My Requests</h3>
+        <button @click="loadMyAccessRequests()" class="text-xs" style="color:var(--accent)">Refresh</button>
+      </div>
+      <template x-if="myRequests.length === 0">
+        <div class="glass rounded-2xl p-6 text-center">
+          <p class="text-sm" style="color:var(--text-muted)">No requests yet. Search for a patient above to get started.</p>
+        </div>
+      </template>
+      <div class="space-y-2">
+        <template x-for="req in myRequests" :key="req.id">
+          <div class="glass rounded-2xl p-4" style="border:1px solid var(--border)">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl glass-bright flex items-center justify-center font-bold text-sm flex-shrink-0" style="color:var(--accent)"
+                x-text="(req.patients?.name || req.patient_id).charAt(0)"></div>
+              <div class="flex-1">
+                <div class="font-medium text-sm" x-text="req.patients?.name || req.patient_id"></div>
+                <div class="text-xs mt-0.5" style="color:var(--text-muted)" x-text="formatRelative(req.created_at)"></div>
+              </div>
+              <span class="pill text-xs"
+                :style="req.status==='pending' ? 'background:rgba(251,191,36,0.15);color:var(--warn);border-color:rgba(251,191,36,0.3)' :
+                        req.status==='approved' ? 'background:rgba(74,222,128,0.15);color:var(--success);border-color:rgba(74,222,128,0.3)' :
+                        'background:rgba(255,107,107,0.15);color:var(--overdue);border-color:rgba(255,107,107,0.3)'"
+                x-text="req.status"></span>
+            </div>
+            <template x-if="req.status === 'approved'">
+              <p class="text-xs mt-2" style="color:var(--success)">✓ You can now view and manage this patient's schedule.</p>
+            </template>
           </div>
         </template>
       </div>
@@ -792,9 +980,16 @@
       <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
       <span class="text-xs">Reports</span>
     </button>
-    <button x-show="isAdmin" @click="mainTab='manage'" class="nav-tab flex-1 flex flex-col items-center gap-1 py-3" :class="{active: mainTab==='manage'}">
+    <button x-show="isAdmin" @click="mainTab='manage'" class="nav-tab flex-1 flex flex-col items-center gap-1 py-3 relative" :class="{active: mainTab==='manage'}">
       <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4"/><path d="M16 19l2 2 4-4"/></svg>
       <span class="text-xs">Manage</span>
+      <template x-if="pendingRequestCount > 0">
+        <span class="absolute top-2 right-3 w-4 h-4 rounded-full text-xs flex items-center justify-center font-bold" style="background:var(--overdue);color:#fff;font-size:9px" x-text="pendingRequestCount"></span>
+      </template>
+    </button>
+    <button x-show="userRole === 'caregiver'" @click="mainTab='access'; loadMyAccessRequests()" class="nav-tab flex-1 flex flex-col items-center gap-1 py-3" :class="{active: mainTab==='access'}">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      <span class="text-xs">Access</span>
     </button>
     <button @click="doLogout()" class="nav-tab flex-1 flex flex-col items-center gap-1 py-3">
       <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
@@ -957,6 +1152,39 @@
   </div>
 </div>
 
+<!-- ═══════════════════ ACCESS REQUEST MODAL ═══════════════════ -->
+<div x-show="accessRequestModal" @click.self="accessRequestModal=false" class="modal-overlay" x-transition>
+  <div class="modal-box max-w-sm">
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="font-display font-bold text-lg">Request Access</h3>
+      <button @click="accessRequestModal=false" class="w-8 h-8 rounded-lg glass flex items-center justify-center">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 2l10 10M12 2L2 12"/></svg>
+      </button>
+    </div>
+    <template x-if="accessRequestTarget">
+      <div>
+        <!-- Patient info -->
+        <div class="flex items-center gap-3 mb-5 p-3 rounded-xl" style="background:var(--bg-card);border:1px solid var(--border-bright)">
+          <div class="w-10 h-10 rounded-xl glass-bright flex items-center justify-center font-bold" style="color:var(--accent)" x-text="accessRequestTarget.name.charAt(0)"></div>
+          <div>
+            <div class="font-semibold text-sm" x-text="accessRequestTarget.name"></div>
+            <div class="text-xs font-mono" style="color:var(--text-muted)" x-text="accessRequestTarget.id"></div>
+          </div>
+        </div>
+        <label class="text-xs mb-2 block" style="color:var(--text-muted)">REASON FOR ACCESS <span style="color:var(--text-muted)">(optional)</span></label>
+        <textarea x-model="accessRequestReason" class="input-field mb-4" rows="3"
+          placeholder="e.g. I am the assigned home caregiver for this patient." style="resize:none"></textarea>
+        <div x-show="accessRequestError" class="text-sm text-red-400 bg-red-400/10 rounded-lg px-3 py-2 mb-3" x-text="accessRequestError"></div>
+        <div class="flex gap-3">
+          <button @click="accessRequestModal=false" class="btn-ghost flex-1">Cancel</button>
+          <button @click="submitAccessRequest()" :disabled="accessRequestLoading" class="btn-primary flex-1"
+            x-text="accessRequestLoading ? 'Sending…' : 'Send Request'"></button>
+        </div>
+      </div>
+    </template>
+  </div>
+</div>
+
 <!-- ═══════════════════ CONFIRM DELETE MODAL ═══════════════════ -->
 <div x-show="deleteConfirm" @click.self="deleteConfirm=false" class="modal-overlay" x-transition>
   <div class="modal-box max-w-xs text-center">
@@ -987,55 +1215,75 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 function careSync() {
   return {
     // ── State ──────────────────────────────────────
-    view: 'loading',   // loading | login | app
+    view: 'loading',
     mainTab: 'today',
+    manageSubTab: 'patients',
     isAdmin: false,
     isDark: true,
-    userRole: null,       // 'manager' | 'caregiver' | null
+    userRole: null,
     showRolePicker: false,
+    isFullscreen: false,
+
+    authUser: null,
+    authLoading: false,
+
+    // Task notes
     taskNoteModal: false,
     taskNoteTarget: null,
     taskNoteText: '',
 
-    authUser: null,       // Supabase auth user object
-    authLoading: false,
-
-    loginInput: '',
-    loginError: '',
-    adminPass: '',
-    adminError: '',
-
+    // Patients
     patients: [],
     activePatient: null,
 
+    // Schedule/tasks
     viewDate: '',
     viewTasks: [],
     taskLoading: false,
+    logCache: {},
 
+    // Dashboard
     dashView: 'weekly',
     weekOffset: 0,
     calOffset: 0,
     selectedDashDay: '',
+    chartWeek: null,
+    chartMonth: null,
 
-    // Cache: { 'patientId_YYYY-MM-DD': { pct, tasks } }
-    logCache: {},
-
+    // Patient edit modal
     openPatientPicker: false,
     patientModal: false,
     editingPatient: null,
     editForm: { name:'', id:'', email:'', meds:[] },
     formError: '',
 
+    // Delete confirm
     deleteConfirm: false,
     deleteTarget: null,
 
+    // Overdue watcher
     overdueTimer: null,
-    chartWeek: null,
-    chartMonth: null,
+
+    // ── Access Control ─────────────────────────────
+    // Manager side
+    accessRequests: [],          // all requests for manager's patients
+    pendingRequestCount: 0,
+
+    // Caregiver side
+    patientSearch: '',
+    patientResults: [],
+    searchLoading: false,
+    myRequests: [],              // caregiver's own requests
+
+    // Access request modal (caregiver)
+    accessRequestModal: false,
+    accessRequestTarget: null,
+    accessRequestReason: '',
+    accessRequestError: '',
+    accessRequestLoading: false,
 
     // ── Init ───────────────────────────────────────
     async init() {
-      // Theme
       const savedTheme = localStorage.getItem('cs_theme');
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       this.isDark = savedTheme ? savedTheme === 'dark' : prefersDark;
@@ -1044,7 +1292,6 @@ function careSync() {
       this.viewDate = this.todayStr();
       this.selectedDashDay = this.todayStr();
 
-      // Check existing session (handles OAuth redirect)
       const { data: { session } } = await sb.auth.getSession();
       if (session) {
         this.authUser = session.user;
@@ -1053,7 +1300,6 @@ function careSync() {
         this.view = 'login';
       }
 
-      // Listen for auth state changes (OAuth callback)
       sb.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' && session) {
           this.authUser = session.user;
@@ -1067,50 +1313,53 @@ function careSync() {
       });
 
       this.startOverdueWatcher();
+      this.initFullscreenListener();
     },
 
     async onSignedIn() {
       this.view = 'loading';
-      await this.loadPatients();
 
-      // Check saved role for this user
-      const savedRole = localStorage.getItem(`cs_role_${this.authUser?.id}`);
-      if (savedRole) {
-        this.userRole = savedRole;
-        this.isAdmin = savedRole === 'manager';
+      // Upsert user profile (in case trigger didn't fire or role needs loading)
+      await sb.from('user_profiles').upsert({
+        id: this.authUser.id,
+        full_name: this.authUser.user_metadata?.full_name || null,
+        avatar_url: this.authUser.user_metadata?.avatar_url || null,
+        email: this.authUser.email
+      }, { onConflict: 'id', ignoreDuplicates: false });
+
+      // Load role from DB (source of truth)
+      const { data: profile } = await sb
+        .from('user_profiles').select('role').eq('id', this.authUser.id).single();
+
+      if (profile?.role) {
+        this.userRole = profile.role;
+        this.isAdmin = profile.role === 'manager';
+        await this.loadPatients();
+        if (this.isAdmin) await this.loadPendingCount();
       }
 
       this.view = 'app';
       this.mainTab = 'today';
       if (this.activePatient) this.loadViewTasks();
 
-      // Show role picker if no role chosen yet
-      if (!savedRole) {
+      if (!profile?.role) {
         this.$nextTick(() => { this.showRolePicker = true; });
       }
     },
 
-    setRole(role) {
+    async setRole(role) {
       this.userRole = role;
       this.isAdmin = role === 'manager';
-      localStorage.setItem(`cs_role_${this.authUser?.id}`, role);
+      await sb.from('user_profiles').update({ role }).eq('id', this.authUser.id);
       this.showRolePicker = false;
-      if (role === 'manager') this.mainTab = 'manage';
-    },
-
-    openTaskNote(task) {
-      this.taskNoteTarget = task;
-      this.taskNoteText = task.note || '';
-      this.taskNoteModal = true;
-    },
-
-    saveTaskNote() {
-      if (this.taskNoteTarget) {
-        this.taskNoteTarget.note = this.taskNoteText;
+      await this.loadPatients();
+      if (role === 'manager') {
+        this.mainTab = 'manage';
+        await this.loadPendingCount();
+      } else {
+        this.mainTab = 'access';
+        await this.loadMyAccessRequests();
       }
-      this.taskNoteModal = false;
-      this.taskNoteText = '';
-      this.taskNoteTarget = null;
     },
 
     // ── Theme ──────────────────────────────────────
@@ -1128,6 +1377,21 @@ function careSync() {
       document.querySelector('meta[name="theme-color"]')?.setAttribute('content', this.isDark ? '#0a0f1e' : '#f0f4f8');
     },
 
+    // ── Fullscreen ─────────────────────────────────
+    toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    },
+
+    initFullscreenListener() {
+      document.addEventListener('fullscreenchange', () => {
+        this.isFullscreen = !!document.fullscreenElement;
+      });
+    },
+
     // ── Auth ───────────────────────────────────────
     async signInWithGoogle() {
       this.authLoading = true;
@@ -1135,110 +1399,87 @@ function careSync() {
         provider: 'google',
         options: { redirectTo: window.location.href }
       });
-      if (error) {
-        this.loginError = error.message;
-        this.authLoading = false;
-      }
-      // Page will redirect; loading state stays until redirect
-    },
-
-    async doLogin() {
-      this.loginError = '';
-      const v = this.loginInput.trim().toLowerCase();
-      if (!v) return;
-
-      // Search patients by name, id, or email
-      const { data, error } = await sb
-        .from('patients')
-        .select('*')
-        .or(`name.ilike.${v},id.ilike.${v},email.ilike.${v}`)
-        .limit(1);
-
-      if (error || !data?.length) {
-        this.loginError = 'No matching patient found.';
-        return;
-      }
-
-      // For patient-login we create a minimal auth session via anon
-      // Load their meds and enter app as non-admin
-      const patient = data[0];
-      const meds = await this.fetchMeds(patient.id);
-      this.activePatient = { ...patient, meds };
-      this.patients = [this.activePatient];
-      this.isAdmin = false;
-      this.view = 'app';
-      this.mainTab = 'today';
-      this.loadViewTasks();
-    },
-
-    async doAdminLogin() {
-      this.adminError = '';
-      if (this.adminPass !== '!ronMan') {
-        this.adminError = 'Invalid passcode.'; return;
-      }
-      // Admin passcode grants management view on top of current session
-      this.isAdmin = true;
-      this.view = 'app';
-      this.mainTab = 'manage';
-      await this.loadPatients();
-      if (!this.activePatient && this.patients.length) {
-        this.activePatient = this.patients[0];
-        this.loadViewTasks();
-      }
+      if (error) { this.authLoading = false; }
     },
 
     async doLogout() {
       await sb.auth.signOut();
       this.view = 'login';
-      this.loginInput = '';
-      this.adminPass = '';
-      this.loginError = '';
-      this.adminError = '';
+      this.userRole = null;
       this.isAdmin = false;
       this.authUser = null;
       this.activePatient = null;
       this.patients = [];
       this.logCache = {};
+      this.accessRequests = [];
+      this.myRequests = [];
+      this.pendingRequestCount = 0;
     },
 
-    // ── Patients (CRUD + Supabase) ─────────────────
+    // ── Patients ───────────────────────────────────
     async loadPatients() {
-      const { data, error } = await sb
-        .from('patients')
-        .select('*')
-        .order('id');
+      if (!this.authUser) return;
 
+      let query;
+      if (this.isAdmin) {
+        // Manager: load patients they created
+        query = sb.from('patients').select('*').eq('created_by', this.authUser.id).order('name');
+      } else {
+        // Caregiver: load patients they have active access to
+        const { data: grants } = await sb
+          .from('caregiver_access')
+          .select('patient_id')
+          .eq('caregiver_id', this.authUser.id)
+          .eq('revoked', false);
+
+        const ids = (grants || []).map(g => g.patient_id);
+        if (!ids.length) { this.patients = []; this.activePatient = null; return; }
+        query = sb.from('patients').select('*').in('id', ids).order('name');
+      }
+
+      const { data, error } = await query;
       if (error) { console.error('loadPatients:', error); return; }
 
-      // Load meds for each patient
-      this.patients = await Promise.all((data || []).map(async p => ({
+      const withMeds = await Promise.all((data || []).map(async p => ({
         ...p,
-        meds: await this.fetchMeds(p.id)
+        meds: await this.fetchMeds(p.id),
+        caregivers: this.isAdmin ? await this.fetchPatientCaregivers(p.id) : []
       })));
 
-      // Seed demo data if empty
-      if (!this.patients.length) {
-        await this.seedDemoData();
-        return this.loadPatients();
-      }
+      this.patients = withMeds;
 
       if (!this.activePatient && this.patients.length) {
         this.activePatient = this.patients[0];
       } else if (this.activePatient) {
-        // Refresh active patient from loaded list
-        this.activePatient = this.patients.find(p => p.id === this.activePatient.id) || this.patients[0];
+        this.activePatient = this.patients.find(p => p.id === this.activePatient.id) || this.patients[0] || null;
       }
     },
 
     async fetchMeds(patientId) {
-      const { data } = await sb
-        .from('meds')
-        .select('*')
-        .eq('patient_id', patientId)
-        .order('time');
+      const { data } = await sb.from('meds').select('*')
+        .eq('patient_id', patientId).eq('active', true).order('time');
       return data || [];
     },
 
+    async fetchPatientCaregivers(patientId) {
+      const { data } = await sb
+        .from('caregiver_access')
+        .select('id, caregiver_id, caregiver_email, user_profiles(full_name, email)')
+        .eq('patient_id', patientId)
+        .eq('revoked', false);
+      return (data || []).map(d => ({
+        id: d.id,
+        caregiver_id: d.caregiver_id,
+        caregiver_email: d.caregiver_email,
+        full_name: d.user_profiles?.full_name || d.caregiver_email
+      }));
+    },
+
+    getPatientName(patientId) {
+      return this.patients.find(p => p.id === patientId)?.name || patientId;
+    },
+
+    // ── Manager: Patient CRUD ──────────────────────
     async openNewPatient() {
       this.editingPatient = null;
       this.editForm = { name:'', id:'', email:'', meds:[] };
@@ -1248,18 +1489,13 @@ function careSync() {
 
     async editPatient(p) {
       this.editingPatient = p;
-      this.editForm = {
-        name: p.name,
-        id: p.id,
-        email: p.email,
-        meds: p.meds.map(m => ({ ...m }))
-      };
+      this.editForm = { name: p.name, id: p.id, email: p.email || '', meds: p.meds.map(m => ({ ...m })) };
       this.formError = '';
       this.patientModal = true;
     },
 
     addMedRow() {
-      this.editForm.meds.push({ type:'med', name:'', dose:'', time:'08:00', taken:false });
+      this.editForm.meds.push({ type:'med', name:'', dose:'', time:'08:00', active: true });
     },
 
     async savePatient() {
@@ -1269,31 +1505,28 @@ function careSync() {
       if (!id.trim())   { this.formError = 'Patient ID is required.'; return; }
 
       if (this.editingPatient) {
-        // Update patient row
         const { error } = await sb.from('patients')
-          .update({ name: name.trim(), email: email.trim() })
+          .update({ name: name.trim(), email: email.trim(), updated_at: new Date().toISOString() })
           .eq('id', this.editingPatient.id);
         if (error) { this.formError = error.message; return; }
 
-        // Replace meds: delete all then re-insert
         await sb.from('meds').delete().eq('patient_id', this.editingPatient.id);
         if (meds.length) {
           await sb.from('meds').insert(
             meds.map((m, i) => ({
               patient_id: this.editingPatient.id,
               type: m.type, name: m.name.trim(),
-              dose: m.dose || null, time: m.time, sort_order: i
+              dose: m.dose || null, time: m.time, sort_order: i, active: true
             }))
           );
         }
       } else {
-        // Check duplicate
         const { data: existing } = await sb.from('patients').select('id').eq('id', id.trim()).maybeSingle();
         if (existing) { this.formError = 'Patient ID already exists.'; return; }
 
         const { error } = await sb.from('patients').insert({
           id: id.trim(), name: name.trim(), email: email.trim(),
-          created_by: this.authUser?.id || null
+          created_by: this.authUser.id
         });
         if (error) { this.formError = error.message; return; }
 
@@ -1302,7 +1535,7 @@ function careSync() {
             meds.map((m, i) => ({
               patient_id: id.trim(),
               type: m.type, name: m.name.trim(),
-              dose: m.dose || null, time: m.time, sort_order: i
+              dose: m.dose || null, time: m.time, sort_order: i, active: true
             }))
           );
         }
@@ -1314,10 +1547,7 @@ function careSync() {
       this.loadViewTasks();
     },
 
-    confirmDeletePatient(p) {
-      this.deleteTarget = p;
-      this.deleteConfirm = true;
-    },
+    confirmDeletePatient(p) { this.deleteTarget = p; this.deleteConfirm = true; },
 
     async doDeletePatient() {
       await sb.from('patients').delete().eq('id', this.deleteTarget.id);
@@ -1328,72 +1558,196 @@ function careSync() {
       this.loadViewTasks();
     },
 
+    // ── Manager: Access Requests ───────────────────
+    async loadAccessRequests() {
+      const patientIds = this.patients.map(p => p.id);
+      if (!patientIds.length) { this.accessRequests = []; return; }
+
+      const { data } = await sb
+        .from('access_requests')
+        .select('*, patients(name)')
+        .in('patient_id', patientIds)
+        .order('created_at', { ascending: false });
+
+      this.accessRequests = data || [];
+      this.pendingRequestCount = this.accessRequests.filter(r => r.status === 'pending').length;
+    },
+
+    async loadPendingCount() {
+      const patientIds = this.patients.map(p => p.id);
+      if (!patientIds.length) return;
+      const { count } = await sb
+        .from('access_requests')
+        .select('id', { count: 'exact', head: true })
+        .in('patient_id', patientIds)
+        .eq('status', 'pending');
+      this.pendingRequestCount = count || 0;
+    },
+
+    async approveRequest(req) {
+      // Update request status
+      await sb.from('access_requests')
+        .update({ status: 'approved', reviewed_by: this.authUser.id, reviewed_at: new Date().toISOString() })
+        .eq('id', req.id);
+
+      // Create access grant
+      await sb.from('caregiver_access').upsert({
+        patient_id: req.patient_id,
+        caregiver_id: req.caregiver_id,
+        caregiver_email: req.caregiver_email,
+        granted_by: this.authUser.id,
+        revoked: false
+      }, { onConflict: 'patient_id,caregiver_id' });
+
+      await this.loadAccessRequests();
+      await this.loadPatients();
+    },
+
+    async denyRequest(req) {
+      await sb.from('access_requests')
+        .update({ status: 'denied', reviewed_by: this.authUser.id, reviewed_at: new Date().toISOString() })
+        .eq('id', req.id);
+      await this.loadAccessRequests();
+    },
+
+    async revokeAccess(patient, cg) {
+      await sb.from('caregiver_access')
+        .update({ revoked: true, revoked_at: new Date().toISOString(), revoked_by: this.authUser.id })
+        .eq('patient_id', patient.id)
+        .eq('caregiver_id', cg.caregiver_id);
+
+      // Also reset any approved request so they can re-request
+      await sb.from('access_requests')
+        .update({ status: 'denied' })
+        .eq('patient_id', patient.id)
+        .eq('caregiver_id', cg.caregiver_id);
+
+      await this.loadPatients();
+    },
+
+    async revokeByRequest(req) {
+      await sb.from('caregiver_access')
+        .update({ revoked: true, revoked_at: new Date().toISOString(), revoked_by: this.authUser.id })
+        .eq('patient_id', req.patient_id)
+        .eq('caregiver_id', req.caregiver_id);
+
+      await sb.from('access_requests')
+        .update({ status: 'denied' })
+        .eq('id', req.id);
+
+      await this.loadAccessRequests();
+      await this.loadPatients();
+    },
+
+    // ── Caregiver: Patient Search & Access ─────────
+    async searchPatients() {
+      const q = this.patientSearch.trim();
+      if (q.length < 2) { this.patientResults = []; return; }
+      this.searchLoading = true;
+      const { data } = await sb.from('patients').select('id, name')
+        .or(`name.ilike.%${q}%,id.ilike.%${q}%`).limit(8);
+      this.patientResults = data || [];
+      this.searchLoading = false;
+    },
+
+    async loadMyAccessRequests() {
+      if (!this.authUser) return;
+      const { data } = await sb.from('access_requests').select('*, patients(name)')
+        .eq('caregiver_id', this.authUser.id).order('created_at', { ascending: false });
+      this.myRequests = data || [];
+    },
+
+    getMyRequestStatus(patientId) {
+      return this.myRequests.find(r => r.patient_id === patientId)?.status || null;
+    },
+
+    openRequestModal(patient) {
+      this.accessRequestTarget = patient;
+      this.accessRequestReason = '';
+      this.accessRequestError = '';
+      this.accessRequestModal = true;
+    },
+
+    async submitAccessRequest() {
+      this.accessRequestError = '';
+      this.accessRequestLoading = true;
+      const { error } = await sb.from('access_requests').upsert({
+        patient_id: this.accessRequestTarget.id,
+        caregiver_id: this.authUser.id,
+        caregiver_name: this.authUser.user_metadata?.full_name || null,
+        caregiver_email: this.authUser.email,
+        reason: this.accessRequestReason.trim() || null,
+        status: 'pending'
+      }, { onConflict: 'patient_id,caregiver_id' });
+      this.accessRequestLoading = false;
+      if (error) { this.accessRequestError = error.message; return; }
+      this.accessRequestModal = false;
+      await this.loadMyAccessRequests();
+    },
+
+    // ── Task Notes ─────────────────────────────────
+    openTaskNote(task) {
+      this.taskNoteTarget = task;
+      this.taskNoteText = task.note || '';
+      this.taskNoteModal = true;
+    },
+
+    async saveTaskNote() {
+      if (this.taskNoteTarget) {
+        this.taskNoteTarget.note = this.taskNoteText;
+        if (this.taskNoteTarget._uid && !this.taskNoteTarget._uid.startsWith('ghost_')) {
+          await sb.from('task_notes').upsert({
+            log_id: this.taskNoteTarget._uid,
+            patient_id: this.activePatient.id,
+            author_id: this.authUser?.id || null,
+            author_name: this.authUser?.user_metadata?.full_name || this.authUser?.email || null,
+            note: this.taskNoteText
+          }, { onConflict: 'log_id' });
+        }
+      }
+      this.taskNoteModal = false;
+      this.taskNoteText = '';
+      this.taskNoteTarget = null;
+    },
+
     // ── Daily Tasks ────────────────────────────────
     async loadViewTasks() {
       if (!this.activePatient) { this.viewTasks = []; return; }
       this.taskLoading = true;
-
-      // Check cache first
       const cacheKey = `${this.activePatient.id}_${this.viewDate}`;
       if (this.logCache[cacheKey]) {
         this.viewTasks = this.logCache[cacheKey].tasks;
         this.taskLoading = false;
         return;
       }
-
-      // Load existing logs for this patient+date
-      const { data: logs } = await sb
-        .from('daily_logs')
-        .select('*, meds(*)')
-        .eq('patient_id', this.activePatient.id)
-        .eq('date', this.viewDate);
-
+      const { data: logs } = await sb.from('daily_logs').select('*, meds(*)')
+        .eq('patient_id', this.activePatient.id).eq('date', this.viewDate);
       const meds = this.activePatient.meds;
-
       if (logs && logs.length) {
-        // Map logs back to task objects
         this.viewTasks = logs.map(log => ({
-          _uid: log.id,
-          med_id: log.med_id,
-          type: log.meds?.type || 'med',
-          name: log.meds?.name || '—',
-          dose: log.meds?.dose || '',
-          time: log.meds?.time || '00:00',
-          taken: log.taken,
-          takenAt: log.taken_at
+          _uid: log.id, med_id: log.med_id,
+          type: log.meds?.type || 'med', name: log.meds?.name || '—',
+          dose: log.meds?.dose || '', time: log.meds?.time || '00:00',
+          taken: log.taken, takenAt: log.taken_at, note: null
+        })).sort((a,b) => a.time.localeCompare(b.time));
+      } else if (meds.length && this.isToday(this.viewDate)) {
+        const { data: newLogs } = await sb.from('daily_logs')
+          .insert(meds.map(m => ({
+            patient_id: this.activePatient.id, med_id: m.id,
+            date: this.viewDate, taken: false, taken_at: null, taken_by: null
+          }))).select('*, meds(*)');
+        this.viewTasks = (newLogs || []).map(log => ({
+          _uid: log.id, med_id: log.med_id,
+          type: log.meds?.type || 'med', name: log.meds?.name || '—',
+          dose: log.meds?.dose || '', time: log.meds?.time || '00:00',
+          taken: false, takenAt: null, note: null
         })).sort((a,b) => a.time.localeCompare(b.time));
       } else {
-        // Create log entries for today from master schedule
-        if (meds.length && this.isToday(this.viewDate)) {
-          const inserts = meds.map(m => ({
-            patient_id: this.activePatient.id,
-            med_id: m.id,
-            date: this.viewDate,
-            taken: false,
-            taken_at: null
-          }));
-          const { data: newLogs } = await sb.from('daily_logs').insert(inserts).select('*, meds(*)');
-          this.viewTasks = (newLogs || []).map(log => ({
-            _uid: log.id,
-            med_id: log.med_id,
-            type: log.meds?.type || 'med',
-            name: log.meds?.name || '—',
-            dose: log.meds?.dose || '',
-            time: log.meds?.time || '00:00',
-            taken: false,
-            takenAt: null
-          })).sort((a,b) => a.time.localeCompare(b.time));
-        } else {
-          // Past day with no logs — show master schedule as all untaken
-          this.viewTasks = meds.map((m, i) => ({
-            _uid: `ghost_${i}`,
-            med_id: m.id,
-            type: m.type, name: m.name, dose: m.dose || '',
-            time: m.time, taken: false, takenAt: null
-          })).sort((a,b) => a.time.localeCompare(b.time));
-        }
+        this.viewTasks = meds.map((m, i) => ({
+          _uid: `ghost_${i}`, med_id: m.id, type: m.type, name: m.name,
+          dose: m.dose || '', time: m.time, taken: false, takenAt: null, note: null
+        })).sort((a,b) => a.time.localeCompare(b.time));
       }
-
       this.logCache[cacheKey] = { tasks: this.viewTasks, pct: this.adherencePct };
       this.taskLoading = false;
     },
@@ -1402,28 +1756,18 @@ function careSync() {
       if (!this.isToday(this.viewDate)) return;
       const newTaken = !task.taken;
       const now = new Date().toISOString();
-
-      // Optimistic update
-      task.taken = newTaken;
-      task.takenAt = newTaken ? now : null;
-
-      // Invalidate cache for today
+      task.taken = newTaken; task.takenAt = newTaken ? now : null;
       delete this.logCache[`${this.activePatient.id}_${this.viewDate}`];
-
-      // Persist — _uid is the log row UUID for real rows
       if (!task._uid.startsWith('ghost_')) {
         await sb.from('daily_logs')
-          .update({ taken: newTaken, taken_at: newTaken ? now : null })
+          .update({ taken: newTaken, taken_at: newTaken ? now : null, taken_by: this.authUser?.id || null })
           .eq('id', task._uid);
       }
     },
 
     getStatus(task) {
       if (task.taken) return 'done';
-      const now = new Date();
-      const [h, m] = task.time.split(':').map(Number);
-      const scheduled = new Date(this.viewDate + 'T' + task.time + ':00');
-      if (now - scheduled > 15 * 60 * 1000) return 'overdue';
+      if (new Date() - new Date(this.viewDate + 'T' + task.time + ':00') > 15*60*1000) return 'overdue';
       return 'pending';
     },
 
@@ -1450,225 +1794,138 @@ function careSync() {
       if (!d) return '';
       return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday:'long' });
     },
-
+    formatRelative(ts) {
+      if (!ts) return '';
+      const diff = Date.now() - new Date(ts).getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1) return 'just now';
+      if (mins < 60) return `${mins}m ago`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return `${hrs}h ago`;
+      return `${Math.floor(hrs/24)}d ago`;
+    },
     shiftDay(delta) {
       const d = new Date(this.viewDate + 'T12:00:00');
       d.setDate(d.getDate() + delta);
       const s = d.toISOString().slice(0, 10);
       if (s > this.todayStr()) return;
-      this.viewDate = s;
-      this.loadViewTasks();
+      this.viewDate = s; this.loadViewTasks();
     },
 
     // ── Dashboard ──────────────────────────────────
     get weekDays() {
-      const days = [];
-      const base = new Date();
+      const days = [], base = new Date();
       base.setDate(base.getDate() + this.weekOffset * 7);
-      const dow = base.getDay();
       const monday = new Date(base);
-      monday.setDate(base.getDate() - ((dow + 6) % 7));
+      monday.setDate(base.getDate() - ((base.getDay() + 6) % 7));
       for (let i = 0; i < 7; i++) {
-        const d = new Date(monday);
-        d.setDate(monday.getDate() + i);
+        const d = new Date(monday); d.setDate(monday.getDate() + i);
         const dateStr = d.toISOString().slice(0, 10);
         const pct = this.getAdherenceForDate(dateStr);
-        days.push({ dateStr, label: ['Mo','Tu','We','Th','Fr','Sa','Su'][i], num: d.getDate(),
-          isToday: dateStr === this.todayStr(), pct, hasData: pct !== null });
+        days.push({ dateStr, label:['Mo','Tu','We','Th','Fr','Sa','Su'][i],
+          num:d.getDate(), isToday:dateStr===this.todayStr(), pct, hasData:pct!==null });
       }
       return days;
     },
-
     get weekLabel() {
-      const days = this.weekDays;
-      if (!days.length) return '';
-      const fmt = d => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric' });
+      const days = this.weekDays; if (!days.length) return '';
+      const fmt = d => new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
       return `${fmt(days[0].dateStr)} – ${fmt(days[6].dateStr)}`;
     },
-
     shiftWeek(delta) {
       if (this.weekOffset + delta > 0) return;
       this.weekOffset += delta;
       this.$nextTick(() => this.updateWeekChart());
     },
-
     getAdherenceForDate(dateStr) {
       if (!this.activePatient) return null;
-      const cacheKey = `${this.activePatient.id}_${dateStr}`;
-      if (this.logCache[cacheKey] !== undefined) return this.logCache[cacheKey]?.pct ?? null;
+      const k = `${this.activePatient.id}_${dateStr}`;
+      if (this.logCache[k] !== undefined) return this.logCache[k]?.pct ?? null;
       return null;
     },
-
     async prefetchWeekLogs() {
       if (!this.activePatient) return;
-      const dates = this.weekDays.map(d => d.dateStr);
-      const missing = dates.filter(d => this.logCache[`${this.activePatient.id}_${d}`] === undefined);
+      const missing = this.weekDays.map(d=>d.dateStr)
+        .filter(d => this.logCache[`${this.activePatient.id}_${d}`] === undefined);
       if (!missing.length) return;
-
-      const { data: logs } = await sb
-        .from('daily_logs')
-        .select('date, taken, med_id')
-        .eq('patient_id', this.activePatient.id)
-        .in('date', missing);
-
-      // Group by date
+      const { data: logs } = await sb.from('daily_logs').select('date,taken,med_id')
+        .eq('patient_id', this.activePatient.id).in('date', missing);
       const byDate = {};
-      (logs || []).forEach(l => {
-        if (!byDate[l.date]) byDate[l.date] = [];
-        byDate[l.date].push(l);
-      });
-
+      (logs||[]).forEach(l => { if(!byDate[l.date]) byDate[l.date]=[]; byDate[l.date].push(l); });
       missing.forEach(d => {
         const rows = byDate[d];
-        if (!rows || !rows.length) { this.logCache[`${this.activePatient.id}_${d}`] = null; return; }
-        const pct = Math.round((rows.filter(r => r.taken).length / rows.length) * 100);
-        this.logCache[`${this.activePatient.id}_${d}`] = { pct, tasks: rows };
+        if (!rows?.length) { this.logCache[`${this.activePatient.id}_${d}`]=null; return; }
+        const pct = Math.round((rows.filter(r=>r.taken).length/rows.length)*100);
+        this.logCache[`${this.activePatient.id}_${d}`]={ pct, tasks:rows };
       });
     },
-
     getTasksForDate(dateStr) {
       if (!this.activePatient) return [];
-      const cacheKey = `${this.activePatient.id}_${dateStr}`;
-      const cached = this.logCache[cacheKey];
+      const cached = this.logCache[`${this.activePatient.id}_${dateStr}`];
       if (cached?.tasks && cached.tasks[0]?.type) return cached.tasks;
-      return (this.activePatient.meds || [])
-        .map((m, i) => ({ ...m, _uid: `dash_${i}`, taken: false }))
-        .sort((a, b) => a.time.localeCompare(b.time));
+      return (this.activePatient.meds||[]).map((m,i)=>({...m,_uid:`dash_${i}`,taken:false}))
+        .sort((a,b)=>a.time.localeCompare(b.time));
     },
-
-    // Monthly
     get calCells() {
-      const now = new Date();
-      now.setMonth(now.getMonth() + this.calOffset);
-      const year = now.getFullYear(), month = now.getMonth();
-      const firstDay = new Date(year, month, 1);
-      const lastDay  = new Date(year, month + 1, 0);
-      const cells = [];
-      let startDow = firstDay.getDay();
-      for (let i = 0; i < startDow; i++) {
-        const d = new Date(firstDay); d.setDate(d.getDate() - (startDow - i));
-        cells.push({ key:'p'+i, day:d.getDate(), inMonth:false, dateStr:d.toISOString().slice(0,10), isToday:false, hasData:false });
-      }
-      for (let d = 1; d <= lastDay.getDate(); d++) {
-        const dt = new Date(year, month, d);
-        const dateStr = dt.toISOString().slice(0, 10);
-        cells.push({ key:dateStr, day:d, inMonth:true, dateStr, isToday: dateStr === this.todayStr(),
-          hasData: this.getAdherenceForDate(dateStr) !== null });
-      }
-      const rem = 42 - cells.length;
-      for (let i = 1; i <= rem; i++) {
-        const d = new Date(lastDay); d.setDate(d.getDate() + i);
-        cells.push({ key:'n'+i, day:d.getDate(), inMonth:false, dateStr:d.toISOString().slice(0,10), isToday:false, hasData:false });
-      }
+      const now = new Date(); now.setMonth(now.getMonth()+this.calOffset);
+      const year=now.getFullYear(), month=now.getMonth();
+      const firstDay=new Date(year,month,1), lastDay=new Date(year,month+1,0);
+      const cells=[]; let startDow=firstDay.getDay();
+      for(let i=0;i<startDow;i++){const d=new Date(firstDay);d.setDate(d.getDate()-(startDow-i));cells.push({key:'p'+i,day:d.getDate(),inMonth:false,dateStr:d.toISOString().slice(0,10),isToday:false,hasData:false});}
+      for(let d=1;d<=lastDay.getDate();d++){const dt=new Date(year,month,d),dateStr=dt.toISOString().slice(0,10);cells.push({key:dateStr,day:d,inMonth:true,dateStr,isToday:dateStr===this.todayStr(),hasData:this.getAdherenceForDate(dateStr)!==null});}
+      const rem=42-cells.length;
+      for(let i=1;i<=rem;i++){const d=new Date(lastDay);d.setDate(d.getDate()+i);cells.push({key:'n'+i,day:d.getDate(),inMonth:false,dateStr:d.toISOString().slice(0,10),isToday:false,hasData:false});}
       return cells;
     },
-
     get calMonthLabel() {
-      const now = new Date(); now.setMonth(now.getMonth() + this.calOffset);
-      return now.toLocaleDateString('en-US', { month:'long', year:'numeric' });
+      const now=new Date(); now.setMonth(now.getMonth()+this.calOffset);
+      return now.toLocaleDateString('en-US',{month:'long',year:'numeric'});
     },
-
     shiftMonth(delta) {
-      if (this.calOffset + delta > 0) return;
-      this.calOffset += delta;
-      this.$nextTick(() => this.updateMonthChart());
+      if(this.calOffset+delta>0)return;
+      this.calOffset+=delta;
+      this.$nextTick(()=>this.updateMonthChart());
     },
-
     get monthStats() {
-      const cells = this.calCells.filter(c => c.inMonth && c.dateStr <= this.todayStr());
-      const pcts = cells.map(c => this.getAdherenceForDate(c.dateStr)).filter(p => p !== null);
-      if (!pcts.length) return { avg:0, best:0, streak:0 };
-      const avg = Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length);
-      const best = Math.max(...pcts);
-      let streak = 0;
-      for (const c of [...cells].reverse()) {
-        const p = this.getAdherenceForDate(c.dateStr);
-        if (p !== null && p >= 80) streak++; else break;
-      }
-      return { avg, best, streak };
+      const cells=this.calCells.filter(c=>c.inMonth&&c.dateStr<=this.todayStr());
+      const pcts=cells.map(c=>this.getAdherenceForDate(c.dateStr)).filter(p=>p!==null);
+      if(!pcts.length)return{avg:0,best:0,streak:0};
+      const avg=Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length), best=Math.max(...pcts);
+      let streak=0;
+      for(const c of [...cells].reverse()){const p=this.getAdherenceForDate(c.dateStr);if(p!==null&&p>=80)streak++;else break;}
+      return{avg,best,streak};
     },
 
     // ── Charts ─────────────────────────────────────
     initCharts() {
-      this.$nextTick(async () => {
-        await this.prefetchWeekLogs();
-        this.updateWeekChart();
-        this.updateMonthChart();
-      });
+      this.$nextTick(async()=>{await this.prefetchWeekLogs();this.updateWeekChart();this.updateMonthChart();});
     },
-
     updateWeekChart() {
-      const canvas = document.getElementById('weekChart');
-      if (!canvas) return;
-      if (this.chartWeek) this.chartWeek.destroy();
-      const labels = this.weekDays.map(d => d.label);
-      const data   = this.weekDays.map(d => d.pct ?? 0);
-      const colors = data.map(v => v >= 80 ? '#4ade80' : v >= 50 ? '#fbbf24' : '#ff6b6b');
-      const tickColor = this.isDark ? 'rgba(232,244,243,0.45)' : 'rgba(15,31,46,0.45)';
-      const gridColor = this.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
-      this.chartWeek = new Chart(canvas, {
-        type: 'bar',
-        data: { labels, datasets: [{ data, backgroundColor: colors, borderRadius: 6, borderSkipped: false }] },
-        options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} },
-          scales: {
-            x: { grid:{display:false}, ticks:{color:tickColor, font:{family:'DM Mono',size:11}} },
-            y: { min:0, max:100, grid:{color:gridColor}, ticks:{color:tickColor, font:{family:'DM Mono',size:10}, callback:v=>v+'%'} }
-          }}
-      });
+      const canvas=document.getElementById('weekChart'); if(!canvas)return;
+      if(this.chartWeek)this.chartWeek.destroy();
+      const labels=this.weekDays.map(d=>d.label), data=this.weekDays.map(d=>d.pct??0);
+      const colors=data.map(v=>v>=80?'#4ade80':v>=50?'#fbbf24':'#ff6b6b');
+      const tickColor=this.isDark?'rgba(232,244,243,0.45)':'rgba(15,31,46,0.45)';
+      const gridColor=this.isDark?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.06)';
+      this.chartWeek=new Chart(canvas,{type:'bar',data:{labels,datasets:[{data,backgroundColor:colors,borderRadius:6,borderSkipped:false}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+          scales:{x:{grid:{display:false},ticks:{color:tickColor,font:{family:'DM Mono',size:11}}},
+            y:{min:0,max:100,grid:{color:gridColor},ticks:{color:tickColor,font:{family:'DM Mono',size:10},callback:v=>v+'%'}}}}});
     },
-
     updateMonthChart() {
-      const canvas = document.getElementById('monthChart');
-      if (!canvas) return;
-      if (this.chartMonth) this.chartMonth.destroy();
-      const cells = this.calCells.filter(c => c.inMonth && c.dateStr <= this.todayStr());
-      const labels = cells.map(c => c.day);
-      const data   = cells.map(c => this.getAdherenceForDate(c.dateStr) ?? 0);
-      const ac = this.isDark ? '#63e8e4' : '#0e9e98';
-      const tickColor = this.isDark ? 'rgba(232,244,243,0.45)' : 'rgba(15,31,46,0.45)';
-      const gridColor = this.isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)';
-      this.chartMonth = new Chart(canvas, {
-        type: 'line',
-        data: { labels, datasets: [{ data, borderColor:ac,
-          backgroundColor: this.isDark ? 'rgba(99,232,228,0.07)' : 'rgba(14,165,155,0.07)',
-          borderWidth:2, pointRadius:3, pointBackgroundColor:ac, fill:true, tension:0.4 }] },
-        options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
-          scales: {
-            x: { grid:{display:false}, ticks:{color:tickColor, font:{family:'DM Mono',size:10}, maxTicksLimit:10} },
-            y: { min:0, max:100, grid:{color:gridColor}, ticks:{color:tickColor, font:{family:'DM Mono',size:10}, callback:v=>v+'%'} }
-          }}
-      });
-    },
-
-    // ── Seed demo data ─────────────────────────────
-    async seedDemoData() {
-      const userId = this.authUser?.id || null;
-      const patientsData = [
-        { id:'P-100', name:'Maria Santos', email:'maria@carersync.app', created_by: userId },
-        { id:'P-101', name:'Jose Reyes',   email:'jose@carersync.app',  created_by: userId }
-      ];
-      const medsData = [
-        { patient_id:'P-100', type:'med',      name:'Metformin',      dose:'500mg',  time:'07:00', sort_order:0 },
-        { patient_id:'P-100', type:'med',      name:'Lisinopril',     dose:'10mg',   time:'07:00', sort_order:1 },
-        { patient_id:'P-100', type:'eat',      name:'Breakfast',      dose:null,     time:'08:00', sort_order:2 },
-        { patient_id:'P-100', type:'hygiene',  name:'Morning Hygiene',dose:null,     time:'09:00', sort_order:3 },
-        { patient_id:'P-100', type:'med',      name:'Aspirin',        dose:'81mg',   time:'12:00', sort_order:4 },
-        { patient_id:'P-100', type:'eat',      name:'Lunch',          dose:null,     time:'12:30', sort_order:5 },
-        { patient_id:'P-100', type:'activity', name:'Afternoon Walk', dose:'20 min', time:'16:00', sort_order:6 },
-        { patient_id:'P-100', type:'eat',      name:'Dinner',         dose:null,     time:'18:30', sort_order:7 },
-        { patient_id:'P-100', type:'med',      name:'Metformin',      dose:'500mg',  time:'19:00', sort_order:8 },
-        { patient_id:'P-100', type:'hygiene',  name:'Evening Hygiene',dose:null,     time:'20:00', sort_order:9 },
-        { patient_id:'P-101', type:'med',      name:'Amlodipine',     dose:'5mg',    time:'07:30', sort_order:0 },
-        { patient_id:'P-101', type:'eat',      name:'Breakfast',      dose:null,     time:'08:30', sort_order:1 },
-        { patient_id:'P-101', type:'med',      name:'Atorvastatin',   dose:'20mg',   time:'09:00', sort_order:2 },
-        { patient_id:'P-101', type:'eat',      name:'Lunch',          dose:null,     time:'13:00', sort_order:3 },
-        { patient_id:'P-101', type:'activity', name:'Physical Therapy',dose:'45 min',time:'15:00', sort_order:4 },
-        { patient_id:'P-101', type:'eat',      name:'Dinner',         dose:null,     time:'19:00', sort_order:5 },
-        { patient_id:'P-101', type:'hygiene',  name:'Bath',           dose:null,     time:'20:00', sort_order:6 },
-      ];
-
-      await sb.from('patients').upsert(patientsData, { onConflict: 'id' });
-      await sb.from('meds').upsert(medsData, { onConflict: 'patient_id,time,name' });
+      const canvas=document.getElementById('monthChart'); if(!canvas)return;
+      if(this.chartMonth)this.chartMonth.destroy();
+      const cells=this.calCells.filter(c=>c.inMonth&&c.dateStr<=this.todayStr());
+      const labels=cells.map(c=>c.day), data=cells.map(c=>this.getAdherenceForDate(c.dateStr)??0);
+      const ac=this.isDark?'#63e8e4':'#0e9e98';
+      const tickColor=this.isDark?'rgba(232,244,243,0.45)':'rgba(15,31,46,0.45)';
+      const gridColor=this.isDark?'rgba(255,255,255,0.04)':'rgba(0,0,0,0.05)';
+      this.chartMonth=new Chart(canvas,{type:'line',data:{labels,datasets:[{data,borderColor:ac,
+        backgroundColor:this.isDark?'rgba(99,232,228,0.07)':'rgba(14,165,155,0.07)',
+        borderWidth:2,pointRadius:3,pointBackgroundColor:ac,fill:true,tension:0.4}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+          scales:{x:{grid:{display:false},ticks:{color:tickColor,font:{family:'DM Mono',size:10},maxTicksLimit:10}},
+            y:{min:0,max:100,grid:{color:gridColor},ticks:{color:tickColor,font:{family:'DM Mono',size:10},callback:v=>v+'%'}}}}});
     },
 
     // ── UI helpers ─────────────────────────────────
