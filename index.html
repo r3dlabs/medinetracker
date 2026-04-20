@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>CarerSync</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230d1829'/%3E%3Cpath d='M2 16h5l3-9 6 18 3-9h5' stroke='%2363e8e4' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
@@ -337,6 +338,15 @@
   /* Wordmark: white in dark mode, accent teal in light mode */
   .app-wordmark { color: #ffffff; transition: color 0.3s ease; }
   [data-theme="light"] .app-wordmark { color: var(--accent); }
+
+  /* Logo pulse glow */
+  @keyframes logoPulse {
+    0%, 100% { box-shadow: 0 0 8px 2px rgba(99,232,228,0.25), 0 0 0px 0px rgba(99,232,228,0.1); }
+    50%       { box-shadow: 0 0 20px 7px rgba(99,232,228,0.45), 0 0 36px 12px rgba(99,232,228,0.12); }
+  }
+  .logo-glow {
+    animation: logoPulse 2.8s ease-in-out infinite;
+  }
 </style>
 </head>
 <body x-data="careSync()" x-init="init()">
@@ -351,26 +361,31 @@
   </div>
   <div class="w-full max-w-sm">
 
-    <!-- Logo -->
-    <div class="text-center mb-10">
-      <div class="inline-flex items-center gap-3 mb-4">
-        <div class="w-12 h-12 rounded-2xl glass-bright flex items-center justify-center">
+    <!-- Login card -->
+    <div class="glass rounded-2xl p-8 text-center">
+
+      <!-- Logo + wordmark -->
+      <div class="flex items-center justify-center gap-3 mb-3">
+        <div class="w-12 h-12 rounded-2xl glass-bright flex items-center justify-center logo-glow">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
           </svg>
         </div>
         <span class="font-display text-3xl font-bold tracking-tight" style="color: var(--accent)">CarerSync</span>
       </div>
-      <p class="text-sm" style="color:var(--text-muted)">Caregiver Management System</p>
-    </div>
 
-    <!-- Login card -->
-    <div class="glass rounded-2xl p-6">
-      <h2 class="font-display text-xl font-bold mb-6">Sign In</h2>
+      <!-- Tagline -->
+      <p class="text-xs font-mono tracking-widest uppercase mb-1" style="color:var(--text-muted)">Caregiver Management System</p>
+
+      <!-- Divider -->
+      <div class="h-px my-6" style="background:var(--border)"></div>
+
+      <!-- Subtitle -->
+      <p class="text-sm mb-6" style="color:var(--text-muted)">Sign in to manage your patients and caregivers</p>
 
       <!-- Google OAuth button -->
       <button @click="signInWithGoogle()" :disabled="authLoading"
-        class="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl font-medium text-sm transition-all mb-4"
+        class="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-xl font-medium text-sm transition-all"
         style="background: var(--bg-card-hover); border: 1px solid var(--border);"
         :style="authLoading ? 'opacity:0.6;cursor:not-allowed' : 'cursor:pointer'"
         onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
@@ -378,47 +393,10 @@
         <span x-text="authLoading ? 'Redirecting…' : 'Continue with Google'"></span>
       </button>
 
-      <!-- Divider -->
-      <div class="flex items-center gap-3 mb-4">
-        <div class="flex-1 h-px" style="background:var(--border)"></div>
-        <span class="text-xs" style="color:var(--text-muted)">OR</span>
-        <div class="flex-1 h-px" style="background:var(--border)"></div>
-      </div>
-
-      <!-- Legacy patient lookup -->
-      <div class="space-y-4">
-        <div>
-          <label class="text-xs mb-2 block" style="color:var(--text-muted)">FULL NAME, PATIENT ID, OR EMAIL</label>
-          <input
-            x-model="loginInput"
-            type="text"
-            class="input-field"
-            placeholder="e.g. P-100 or jane@email.com"
-            @keydown.enter="doLogin()"
-          >
-        </div>
-
-        <div x-show="loginError" class="text-sm text-red-400 bg-red-400/10 rounded-lg px-3 py-2" x-text="loginError"></div>
-
-        <button @click="doLogin()" :disabled="authLoading" class="btn-primary w-full text-center">
-          Continue →
-        </button>
-      </div>
-
-      <div class="mt-6 pt-6 border-t" style="border-color:var(--border)">
-        <p class="text-xs text-center mb-3" style="color:var(--text-muted)">MANAGEMENT ACCESS</p>
-        <div class="flex gap-2">
-          <input x-model="adminPass" type="password" class="input-field" placeholder="Admin passcode" @keydown.enter="doAdminLogin()">
-          <button @click="doAdminLogin()" class="btn-ghost whitespace-nowrap text-sm px-4">Admin</button>
-        </div>
-        <div x-show="adminError" class="text-xs text-red-400 mt-2" x-text="adminError"></div>
-      </div>
+      <p class="text-xs text-center mt-5" style="color:var(--text-muted)">
+        By signing in, you agree to our terms of service and privacy policy.
+      </p>
     </div>
-
-    <!-- Demo hint -->
-    <p class="text-center text-xs mt-4" style="color:var(--text-muted)">
-      Demo: use <span class="font-mono" style="color:var(--accent)">P-100</span> or <span class="font-mono" style="color:var(--accent)">Maria Santos</span>
-    </p>
   </div>
 </div>
 
@@ -443,13 +421,19 @@
   <header class="sticky top-0 z-50 glass border-b" style="border-color:var(--border)">
     <div class="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-xl glass-bright flex items-center justify-center">
+        <div class="w-8 h-8 rounded-xl glass-bright flex items-center justify-center logo-glow">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
         </div>
         <span class="font-display font-bold text-lg tracking-tight" style="color: var(--accent)">CarerSync</span>
       </div>
 
       <div class="flex items-center gap-3">
+        <!-- Role badge -->
+        <div x-show="userRole" class="hidden sm:flex items-center gap-1.5 glass rounded-full px-3 py-1.5">
+          <span x-text="userRole === 'manager' ? '🏥' : '🤝'" class="text-xs"></span>
+          <span class="text-xs font-mono capitalize" style="color:var(--text-muted)" x-text="userRole === 'manager' ? 'Manager' : 'Caregiver'"></span>
+        </div>
+
         <!-- Overdue badge -->
         <div x-show="overdueCount > 0" class="flex items-center gap-1.5 glass rounded-full px-3 py-1.5">
           <div class="notif-dot"></div>
@@ -561,22 +545,40 @@
                   <span class="text-xs" style="color:var(--success)">Done</span>
                 </template>
               </div>
+              <template x-if="task.note">
+                <div class="mt-1 text-xs px-2 py-1 rounded-lg truncate" style="background:rgba(167,139,250,0.1); color:var(--accent2); border:1px solid rgba(167,139,250,0.2)" x-text="'📝 ' + task.note"></div>
+              </template>
             </div>
 
-            <!-- Toggle -->
-            <button
-              @click="toggleTask(task)"
-              class="toggle-btn"
-              :class="{ 'done': getStatus(task) === 'done', 'overdue': getStatus(task) === 'overdue' }"
-              :disabled="!isToday(viewDate)"
-            >
-              <template x-if="getStatus(task) === 'done'">
-                <svg width="18" height="18" fill="none" stroke="#060c1a" stroke-width="3"><path d="M4 10l4 4 8-8"/></svg>
+            <!-- Toggle (all roles can mark done) -->
+            <div class="flex items-center gap-2">
+              <!-- Note button — caregiver only -->
+              <template x-if="userRole === 'caregiver'">
+                <button @click="openTaskNote(task)"
+                  class="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
+                  :style="task.note ? 'background:rgba(167,139,250,0.18); border:1px solid rgba(167,139,250,0.4)' : 'background:var(--bg-card); border:1px solid var(--border)'"
+                  :title="task.note ? 'View/edit note' : 'Add note'">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24">
+                    <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5"/>
+                    <path d="M17.5 2.5a2.121 2.121 0 013 3L12 14l-4 1 1-4 8.5-8.5z"/>
+                  </svg>
+                </button>
               </template>
-              <template x-if="getStatus(task) !== 'done'">
-                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="6"/></svg>
-              </template>
-            </button>
+
+              <button
+                @click="toggleTask(task)"
+                class="toggle-btn"
+                :class="{ 'done': getStatus(task) === 'done', 'overdue': getStatus(task) === 'overdue' }"
+                :disabled="!isToday(viewDate)"
+              >
+                <template x-if="getStatus(task) === 'done'">
+                  <svg width="18" height="18" fill="none" stroke="#060c1a" stroke-width="3"><path d="M4 10l4 4 8-8"/></svg>
+                </template>
+                <template x-if="getStatus(task) !== 'done'">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="6"/></svg>
+                </template>
+              </button>
+            </div>
           </div>
         </template>
       </div>
@@ -886,6 +888,75 @@
   </div>
 </div>
 
+<!-- ═══════════════════ ROLE PICKER MODAL ═══════════════════ -->
+<div x-show="showRolePicker" class="modal-overlay" x-transition style="z-index:200">
+  <div class="modal-box max-w-sm text-center">
+    <!-- Logo -->
+    <div class="w-14 h-14 rounded-2xl glass-bright flex items-center justify-center mx-auto mb-4 logo-glow">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    </div>
+    <h3 class="font-display font-bold text-xl mb-1">Welcome to CarerSync</h3>
+    <p class="text-sm mb-8" style="color:var(--text-muted)">How will you be using this app?</p>
+
+    <div class="space-y-3 text-left">
+      <!-- Patient Manager -->
+      <button @click="setRole('manager')"
+        class="w-full flex items-start gap-4 p-5 rounded-2xl transition-all"
+        style="background:var(--bg-card); border:1px solid var(--border)"
+        onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-xl" style="background:rgba(99,232,228,0.12)">🏥</div>
+        <div>
+          <div class="font-display font-bold text-sm mb-0.5" style="color:var(--accent)">Patient Manager</div>
+          <div class="text-xs leading-relaxed" style="color:var(--text-muted)">Add & manage patients, schedule activities, view full reports and analytics.</div>
+        </div>
+      </button>
+
+      <!-- Caregiver -->
+      <button @click="setRole('caregiver')"
+        class="w-full flex items-start gap-4 p-5 rounded-2xl transition-all"
+        style="background:var(--bg-card); border:1px solid var(--border)"
+        onmouseover="this.style.borderColor='var(--accent2)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-xl" style="background:rgba(167,139,250,0.12)">🤝</div>
+        <div>
+          <div class="font-display font-bold text-sm mb-0.5" style="color:var(--accent2)">Caregiver</div>
+          <div class="text-xs leading-relaxed" style="color:var(--text-muted)">Mark patient activities as completed and add notes to tasks.</div>
+        </div>
+      </button>
+    </div>
+
+    <p class="text-xs mt-5" style="color:var(--text-muted)">You can change this later from your profile settings.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════ TASK NOTES MODAL (Caregiver) ═══════════════════ -->
+<div x-show="taskNoteModal" @click.self="taskNoteModal=false" class="modal-overlay" x-transition>
+  <div class="modal-box max-w-sm">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-display font-bold text-lg">Add Note</h3>
+      <button @click="taskNoteModal=false" class="w-8 h-8 rounded-lg glass flex items-center justify-center">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 2l10 10M12 2L2 12"/></svg>
+      </button>
+    </div>
+    <template x-if="taskNoteTarget">
+      <div>
+        <div class="flex items-center gap-3 mb-4 p-3 rounded-xl" style="background:var(--bg-card); border:1px solid var(--border)">
+          <span x-text="typeStyle(taskNoteTarget.type).icon" class="text-xl"></span>
+          <div>
+            <div class="font-medium text-sm" x-text="taskNoteTarget.name"></div>
+            <div class="text-xs font-mono" style="color:var(--text-muted)" x-text="taskNoteTarget.time"></div>
+          </div>
+        </div>
+        <label class="text-xs mb-2 block" style="color:var(--text-muted)">NOTE</label>
+        <textarea x-model="taskNoteText" class="input-field" rows="4" placeholder="e.g. Patient had difficulty swallowing. Crushed tablet in yoghurt." style="resize:none"></textarea>
+        <div class="flex gap-3 mt-4">
+          <button @click="taskNoteModal=false" class="btn-ghost flex-1">Cancel</button>
+          <button @click="saveTaskNote()" class="btn-primary flex-1">Save Note</button>
+        </div>
+      </div>
+    </template>
+  </div>
+</div>
+
 <!-- ═══════════════════ CONFIRM DELETE MODAL ═══════════════════ -->
 <div x-show="deleteConfirm" @click.self="deleteConfirm=false" class="modal-overlay" x-transition>
   <div class="modal-box max-w-xs text-center">
@@ -920,6 +991,11 @@ function careSync() {
     mainTab: 'today',
     isAdmin: false,
     isDark: true,
+    userRole: null,       // 'manager' | 'caregiver' | null
+    showRolePicker: false,
+    taskNoteModal: false,
+    taskNoteTarget: null,
+    taskNoteText: '',
 
     authUser: null,       // Supabase auth user object
     authLoading: false,
@@ -996,10 +1072,45 @@ function careSync() {
     async onSignedIn() {
       this.view = 'loading';
       await this.loadPatients();
-      this.isAdmin = false;
+
+      // Check saved role for this user
+      const savedRole = localStorage.getItem(`cs_role_${this.authUser?.id}`);
+      if (savedRole) {
+        this.userRole = savedRole;
+        this.isAdmin = savedRole === 'manager';
+      }
+
       this.view = 'app';
       this.mainTab = 'today';
       if (this.activePatient) this.loadViewTasks();
+
+      // Show role picker if no role chosen yet
+      if (!savedRole) {
+        this.$nextTick(() => { this.showRolePicker = true; });
+      }
+    },
+
+    setRole(role) {
+      this.userRole = role;
+      this.isAdmin = role === 'manager';
+      localStorage.setItem(`cs_role_${this.authUser?.id}`, role);
+      this.showRolePicker = false;
+      if (role === 'manager') this.mainTab = 'manage';
+    },
+
+    openTaskNote(task) {
+      this.taskNoteTarget = task;
+      this.taskNoteText = task.note || '';
+      this.taskNoteModal = true;
+    },
+
+    saveTaskNote() {
+      if (this.taskNoteTarget) {
+        this.taskNoteTarget.note = this.taskNoteText;
+      }
+      this.taskNoteModal = false;
+      this.taskNoteText = '';
+      this.taskNoteTarget = null;
     },
 
     // ── Theme ──────────────────────────────────────
