@@ -1261,6 +1261,7 @@ function careSync() {
 
     // Overdue watcher
     overdueTimer: null,
+    _authSubscription: null,
 
     // ── Access Control ─────────────────────────────
     // Manager side
@@ -1298,8 +1299,11 @@ function careSync() {
         this.view = 'login';
       }
 
-      sb.auth.onAuthStateChange(async (event, session) => {
+      // FIX 1: Store subscription so we can unsubscribe on logout
+      const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' && session) {
+          // FIX 2: Guard — ignore if this event is for the already-loaded user
+          if (this.authUser?.id === session.user.id && this.view === 'app') return;
           this.authUser = session.user;
           await this.onSignedIn();
         } else if (event === 'SIGNED_OUT') {
@@ -1309,6 +1313,7 @@ function careSync() {
           this.activePatient = null;
         }
       });
+      this._authSubscription = subscription;
 
       this.startOverdueWatcher();
       this.initFullscreenListener();
@@ -1317,7 +1322,14 @@ function careSync() {
     async onSignedIn() {
       this.view = 'loading';
 
-      // Upsert user profile (in case trigger didn't fire or role needs loading)
+      // FIX 2: Confirm session uid matches before doing anything
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session || session.user.id !== this.authUser.id) {
+        this.view = 'login';
+        return;
+      }
+
+      // Upsert user profile
       await sb.from('user_profiles').upsert({
         id: this.authUser.id,
         full_name: this.authUser.user_metadata?.full_name || null,
@@ -1325,7 +1337,7 @@ function careSync() {
         email: this.authUser.email
       }, { onConflict: 'id', ignoreDuplicates: false });
 
-      // Load role from DB (source of truth)
+      // Load role from DB
       const { data: profile } = await sb
         .from('user_profiles').select('role').eq('id', this.authUser.id).single();
 
@@ -1401,7 +1413,17 @@ function careSync() {
     },
 
     async doLogout() {
-      await sb.auth.signOut();
+      // FIX 3: Unsubscribe listener BEFORE signing out to prevent it
+      // firing for the old user after the new one's session starts
+      if (this._authSubscription) {
+        this._authSubscription.unsubscribe();
+        this._authSubscription = null;
+      }
+
+      // Sign out globally — clears all Supabase localStorage keys for this user
+      await sb.auth.signOut({ scope: 'global' });
+
+      // Full state wipe
       this.view = 'login';
       this.userRole = null;
       this.isAdmin = false;
@@ -1412,6 +1434,24 @@ function careSync() {
       this.accessRequests = [];
       this.myRequests = [];
       this.pendingRequestCount = 0;
+      this.showRolePicker = false;
+      this.patientResults = [];
+      this.patientSearch = '';
+
+      // Re-register a fresh listener for the next sign-in
+      const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          if (this.authUser?.id === session.user.id && this.view === 'app') return;
+          this.authUser = session.user;
+          await this.onSignedIn();
+        } else if (event === 'SIGNED_OUT') {
+          this.authUser = null;
+          this.view = 'login';
+          this.patients = [];
+          this.activePatient = null;
+        }
+      });
+      this._authSubscription = subscription;
     },
 
     // ── Patients ───────────────────────────────────
